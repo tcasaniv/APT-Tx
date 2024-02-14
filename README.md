@@ -38,3 +38,14 @@ PS APT-Tx> hackrf_transfer -t ".\output_APT.bin" -f 137500000 -s 2822400 -a 1  -
 ```
 
 Con ello estamos transmitiendo el archivo de muestras I/Q  a una frecuencia central de 137.5 MHz con una frecuencia de muestreo de 2.822400 MHz (44100 * 64) con el amplificador de potencia activado y con una ganancia de 40. Además se le está aplicando un filtro de ancho de banda de 1.75 MHz.
+
+
+## Visualizar archivo I/Q (sin transmitir)
+
+Podemos visualizar el archivo I/Q desde el programa SDR#.
+- Para ello vamos en la opción de Source/Fuente y seleccionamos `Baseband File Player`.
+- Seleccionamos el archivo .bin.
+- Ingresamos el Sample Rate de 2822400 Hz.
+- Con 16 Bits por muestra.
+- Y solo un canal.
+Con ello podremos ver la señal sin necesidad de transmitir con un transmisor SDR.
