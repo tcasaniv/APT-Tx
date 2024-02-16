@@ -113,8 +113,10 @@ int main(int argc, char **argv){
 	double        s[MEM_SIZE+1] = {0};                                // Variables para almacenar datos de entrada
 	int           Fs            = 44100;                              // frecuencia de muestreo del archivo wav de salida
 	int           ch            = 1;                                  // Número de canales de entrada
-	int           len           = 0.5*Fs*bmp_hgt;
+	int           len           = 0.5*Fs*bmp_hgt;				      // Duración del audio al ser codificado en APT
 	double        f             = 2400.0;
+	unsigned long portadora_AM;
+	unsigned long linea_actual_normalizada;
 
 	//Preparación de los archivos wave de salida
 	Fs_out        = Fs;                                               // Ajustar la frecuencia de muestreo de salida
@@ -138,9 +140,14 @@ int main(int argc, char **argv){
 	fprintf(output_file_WAV, "data");                                              // "data"
 	fwrite(&data_len,     sizeof(unsigned long ), 1, output_file_WAV);             // length of output wav data
 
-	//main loop
+	
+	// Salta a la posición 54 para leer los canales RGB de la imagen pixel a pixel
 	fseek(imageA, 54L, SEEK_SET);
+
+	// Bucle para crear línea por línea la imagen APT
 	while(t_out<len){
+
+		// Crea una línea APT
 		if (n==0) {
 			for (k=0;k<909;k++){
 				i = 0;
@@ -153,6 +160,7 @@ int main(int argc, char **argv){
 				// CANAL G (verde)
 				fread(&tmp1, sizeof(unsigned char), 1, imageA);
 				i = i + tmp1;
+				// image_b[k] = i / 2;
 
 				// CANAL B (azul)
 				fread(&tmp1, sizeof(unsigned char), 1, imageA);
@@ -195,10 +203,14 @@ int main(int argc, char **argv){
 		if(n%2==1 || n%10==2 || n%1040==4) {                                    // 2080*10   +  1040   +   208    +     2 = 22050
 			k = 11;                                                             //           =2080/2  =2080/10 =2080/1040
 		}
+
 		for (m=0;m<k;m++) {
-			s[t]=0.5+0.5*(sin(2.0*M_PI*f*t_out/Fs_out)*(line_pic[n]/255));      // Amplitude Modulation
-			output = s[t]*255;                                                  // Convierte la salida en un número entero.
-			fwrite(&output, sizeof(unsigned char), 1, output_file_WAV);                      // Anotar los resultados
+			// Modular en AM
+			portadora_AM = sin(2.0*M_PI*f*t_out/Fs_out);
+			linea_actual_normalizada = line_pic[n]/255;
+			s[t] = 0.5 + 0.5*( portadora_AM * linea_actual_normalizada );      // Modulación de amplitud
+			output = s[t]*255;  // Escala a 0 a 255
+			fwrite(&output, sizeof(unsigned char), 1, output_file_WAV);         // Guardar cada muestra modulada en AM en el WAV
 			t=(t+1)%MEM_SIZE;                                                   // Actualización del tiempo t
 			t_out++;                                                            // Medición del tiempo de fin de bucle
 		}
@@ -208,18 +220,26 @@ int main(int argc, char **argv){
 	fclose(output_file_WAV);
 
 	printf("\n%s fue generado correctamente.\n",argv[2]);
+
+
+	// Ahora se debe modular el audio del WAV en FM y luego en I/Q
+	// para finalmente guardarlo como archivo binario
 	
 	printf("\n|-------- Propiedades APT WAV --------|\n");
 	
+	// Leemos el archivo WAV
 	if((output_file_WAV = fopen(argv[2], "rb")) == NULL){
 		fprintf( stderr, "No se puede abrir %s\n", argv[2] );
 		exit(-2);
 	}
+
+	// Creamos un archivo binario vacío para guardar muestras I/Q
 	if((output_file_IQ_bin = fopen(argv[3], "wb")) == NULL){
 		fprintf( stderr, "No se puede abrir %s\n", argv[3] );
 		exit(-2);
 	}
 	
+	// Salta a la posición 40 para leer propiedades del WAV
 	fseek(output_file_WAV, 40L, SEEK_SET);
 	fread(&tmp4, sizeof(unsigned long), 1, output_file_WAV);
 	
@@ -239,32 +259,57 @@ int main(int argc, char **argv){
 	unsigned char xQ;
 	
 	printf("Generando archivo binario I/Q\n");
+	// Salta a la posición 44 para leer las muestras de audio del WAV
 	fseek(output_file_WAV, 44L, SEEK_SET);
 	tmp[0] = 0.0; 
-	for (i=0;i<22050*2*tmp4;i++){
-		fread(&tmp_un,sizeof(unsigned char), 1, output_file_WAV);
+	unsigned long frecuencia_instantanea;
+	unsigned long frecuencia_instantanea_normalizada;
+	double muestra_anterior = 0.0;
+	double muestra_actual;
+	double muestra_actual_normalizada;
+
+	double portadora_FM = (2.0*M_PI*50.0e3/Fs_iq);
+	unsigned long  numero_muestras = 22050*2*tmp4;
+
+	for (i=0;i<numero_muestras;i++){
+		fread(&muestra_actual,sizeof(unsigned char), 1, output_file_WAV);
+		muestra_actual_normalizada = (muestra_actual-127.5)/128;
 		
-		tmp[1] = tmp[0];
-		tmp[0] = (tmp_un-127.5)/128;
-		
+		// Solo modula en FM y en I/Q por cada muestra de audio a siguiendo la codificación 16-bit PCM.
+		// Cada muestra de audio será modulada en 16*4 muestras I/Q
 		for (m=0;m<16;m++){
 			for (k=0;k<4;k++){
-				theta = theta + (2.0*M_PI*50.0e3/Fs_iq)*(tmp[1]*(m+1.0)+tmp[0]*(15.0-m))/16.0;
+				// Modular en FM y hallar la fase
+				frecuencia_instantanea = muestra_anterior*(m+1.0) + muestra_actual_normalizada*(15.0-m);
+				frecuencia_instantanea_normalizada = frecuencia_instantanea /16.0;
+				// Modular en FM y hallar la fase
+				theta = theta + portadora_FM * frecuencia_instantanea_normalizada;
+
+				//Asegurarse que la fase no se deesborde
 				if( theta > M_PI ){
 					theta = theta - (double)(2.0*M_PI);
 				}
 				if( theta <-M_PI ){
 					theta = theta + (double)(2.0*M_PI);
 				}
+
+				// Modular en I/Q según la fase
 				xI = (unsigned char)((sin(mr*theta)) * 127.0);
 				xQ = (unsigned char)((cos(mr*theta)) * 127.0);
+
+				// Guardar muestra I/Q en el archivo binario
 				fwrite(&xI, sizeof(unsigned char), 1, output_file_IQ_bin);
 				fwrite(&xQ, sizeof(unsigned char), 1, output_file_IQ_bin);
 				t=(t+1)%MEM_SIZE_iq; 
 			}
 		}
+		muestra_anterior = muestra_actual_normalizada;
 	}
+
+
 	printf("\n%s fue generado correctamente.\n",argv[3]);
+
+	// Cerramos los archivos WAV y binario
 	fclose(output_file_WAV);
 	fclose(output_file_IQ_bin);
 
