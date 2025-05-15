@@ -29,6 +29,8 @@ gcc "APT Encoder (C)/APT_Tx.c" -o "build/Linux64/APT_Tx" -lm
 - Este WAV luego se modula en FM y se convierte a señal I/Q.
 - Se guarda la señal I/Q en formato .bin
 
+**Nota:** En caso de no tener la imagen en formato BMP se recomienda usar la herramienta provista en [`tools/convert_img.py`](tools/convert_img.py). Para más información ver [README convert_image.py](tools/README.md).
+
 ## Modo de uso
 
 Todo ese proceso se logra con el siguiente comando para usar una sola imagen BMP.
