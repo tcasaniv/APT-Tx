@@ -1,6 +1,6 @@
-img/*
-BMP/*
-Files_Tx/*
+*/Files_Tx/*
+*/Files_download/*
+*/Files_preprocessed/*
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
