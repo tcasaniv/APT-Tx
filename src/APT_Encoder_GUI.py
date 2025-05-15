@@ -318,14 +318,14 @@ etiqueta_apt_title.grid(row=9, column=1,columnspan=3)
 # Imagen A de entrada
 etiqueta_input_imgA = Label(frame_apt_encoder, text='Imagen A:', width=20)
 etiqueta_input_imgA.grid(row=10, column=1)
-input_imgA = StringVar(value='./Files/Image1.jpeg')
+input_imgA = StringVar(value='./Files_download/img_A.jpg')
 entrada_input_imgA = Entry(frame_apt_encoder, textvariable=input_imgA,width=60)
 entrada_input_imgA.grid(row=10, column=2, sticky="ew")
 
 # Imagen B de entrada
 etiqueta_input_imgB = Label(frame_apt_encoder, text='Imagen B:', width=20)
 etiqueta_input_imgB.grid(row=12, column=1)
-input_imgB = StringVar(value='./Files/Image1.jpeg')
+input_imgB = StringVar(value='./Files_download/img_B.jpg')
 entrada_input_imgB = Entry(frame_apt_encoder, textvariable=input_imgB,width=60)
 entrada_input_imgB.grid(row=12, column=2, sticky="ew")
 
