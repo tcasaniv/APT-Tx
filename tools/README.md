@@ -22,4 +22,4 @@ Correr el archivo con python:
 python tools/convert_img.py
 ```
 
-En la misma carpeta de la imagen original aparecerá la imagen ahora en formato BMP.
+En la misma carpeta de la imagen original aparecerá una carpeta BMP con la imagen ahora en formato BMP.

@@ -54,7 +54,7 @@ def preprocesar_img_to_APT(ruta_entrada_img: str) -> str:
     img_reescalada = img_reescalada.convert("RGB")
 
     # Crea la ruta para guardar la imagen
-    ruta_directorio_salida = os.path.join(os.path.dirname(directorio_archivo), 'BMP')
+    ruta_directorio_salida = os.path.join(directorio_archivo, 'BMP')
     print(f"ruta_directorio_salida: {ruta_directorio_salida}")
     
     img_salida_reescalada = f'{nombre_sin_extension}_reescalada.bmp'
