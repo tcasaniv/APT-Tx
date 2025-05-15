@@ -173,12 +173,12 @@ def apt_encoder():
     syncB_array = [int(bit) for bit in SYNCB]
 
     # Generar una línea de los píxeles de sincronización
-    syncA_pixels = np.array(syncA_array, dtype=np.int8) * 255
-    syncB_pixels = np.array(syncB_array, dtype=np.int8) * 255
+    syncA_pixels = np.array(syncA_array, dtype=np.int16) * 255
+    syncB_pixels = np.array(syncB_array, dtype=np.int16) * 255
 
     # Generar una línea de los píxeles espaciales
-    spaceA_pixels = np.zeros(47, dtype=np.int8)
-    spaceB_pixels = np.ones(47, dtype=np.int8) * 255
+    spaceA_pixels = np.zeros(47, dtype=np.int16)
+    spaceB_pixels = np.ones(47, dtype=np.int16) * 255
 
     # Crear una matriz vacía para nuestra imagen final
     image_pixels = np.zeros(shape=(videoA_image.height, 2080))
@@ -192,16 +192,16 @@ def apt_encoder():
 
         if telemetry_block < 8:
             block_color = 32 * (telemetry_block)
-            telemetryA_pixels = np.ones(45, dtype=np.int8) * block_color
-            telemetryB_pixels = np.ones(45, dtype=np.int8) * block_color
+            telemetryA_pixels = np.ones(45, dtype=np.int16) * block_color
+            telemetryB_pixels = np.ones(45, dtype=np.int16) * block_color
 
         elif telemetry_block == 8:
-            telemetryA_pixels = np.zeros(45, dtype=np.int8)
-            telemetryB_pixels = np.zeros(45, dtype=np.int8)
+            telemetryA_pixels = np.zeros(45, dtype=np.int16)
+            telemetryB_pixels = np.zeros(45, dtype=np.int16)
 
         else:
-            telemetryA_pixels = np.ones(45, dtype=np.int8) * 128
-            telemetryB_pixels = np.ones(45, dtype=np.int8) * 128
+            telemetryA_pixels = np.ones(45, dtype=np.int16) * 128
+            telemetryB_pixels = np.ones(45, dtype=np.int16) * 128
 
         # Concatenar para hacer una fila entera de la imagen
         row = np.concatenate((syncA_pixels, spaceB_pixels if minute_marker else spaceA_pixels, videoA_pixels[line], telemetryA_pixels, syncB_pixels, spaceA_pixels if minute_marker else spaceB_pixels, videoB_pixels[line], telemetryB_pixels))
