@@ -1,0 +1,6 @@
+tk
+numpy
+matplotlib
+requests
+pillow
+scipy
