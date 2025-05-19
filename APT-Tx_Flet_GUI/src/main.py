@@ -3,6 +3,7 @@ import os
 import time
 import platform
 import subprocess
+import shutil
 
 VERSION_APP="v0.1.0"
 
@@ -114,27 +115,14 @@ def preprocessing_img(page: ft.Page, image_name_suffix: str, status_bar_text_ref
     try:
         if source_image_path_val.startswith("http"):
             # En un caso real, descargaríamos la imagen aquí.
-            # Por ahora, usamos un placeholder para el archivo guardado y la visualización.
-            # Para simular un archivo real, podríamos descargar el PLACEHOLDER_PREPROCESSED_DONE
-            # o simplemente crear un archivo dummy. Para este ejemplo, diremos que el "procesado"
-            # es el placeholder genérico.
             # Aquí NO guardamos un archivo real desde URL para simplificar la simulación.
             # En su lugar, la imagen preprocesada mostrada será un placeholder.
             preprocessed_image_display_ref.src = PLACEHOLDER_PREPROCESSED_DONE 
-            # Como no hay archivo real guardado desde URL, retornamos None o un path simbólico.
-            # Para mantener la lógica de botones, es mejor si *simulamos* que existe.
-            # Vamos a crear un archivo "dummy" o no hacer nada y solo actualizar UI.
             # Para que `update_action_buttons_state` funcione, es mejor tener una ruta.
-            # Vamos a usar el propio placeholder como "fuente" de la copia.
-            # Esto es muy artificial, pero sirve para el flujo de UI.
             # En un caso real, se descargaría y se procesaría.
-            # Para simplificar, diremos que el "preprocesamiento" de una URL resulta en la imagen placeholder.
-            # Y no se guarda nada localmente para este ejemplo (o se guardaría el placeholder mismo).
             # Si queremos que la lógica de "archivo existe" funcione, necesitamos un archivo.
             # Por ahora, la simulación de URL no generará un archivo físico para preprocesamiento.
             # Esto significa que el flujo se detendrá si la fuente es URL.
-            # Mejoramos: si es URL, mostramos placeholder, pero no generamos path local para preproc.
-            # Esto significa que el preprocesamiento SOLO funcionará con archivos locales en esta simulación.
             if source_image_path_val.startswith("http"): # Si es URL, mostramos placeholder "done" pero no generamos archivo
                 preprocessed_image_display_ref.src = PLACEHOLDER_PREPROCESSED_DONE
                 status_bar_text_ref.value = f"Imagen {image_name_suffix} (URL) 'preprocesada' (simulado visualmente)."
@@ -175,18 +163,12 @@ def apt_encoding_img(page: ft.Page, status_label, apt_image_display,
     page.update()
     time.sleep(2)
 
-    output_filename = "apt_encoded_image.png" # Podría ser .jpg o lo que genere tu lógica real
+    output_filename = "apt_encoded_image.png" # Podría ser .jpg o algún otro formato de imagen
     generated_file_path = os.path.join(get_app_files_dir(), output_filename)
 
     # Simulación: Copiar una imagen de placeholder (o la primera preprocesada)
     try:
         # En una app real, aquí se generaría la imagen APT.
-        # Para simular, copiamos una imagen de ejemplo o la primera preprocesada.
-        # Vamos a usar DUMMY_APT_IMAGE_FOR_SIMULATION si es una URL y la podemos descargar
-        # o simplemente usar un placeholder como fuente.
-        # shutil.copy(preproc_a_path, generated_file_path) # Ejemplo simple: copiar la A
-        # O mejor, una imagen APT placeholder:
-        # Para simular un archivo real, si DUMMY_APT_IMAGE_FOR_SIMULATION fuera un path local, lo copiaríamos.
         # Como es URL, no lo vamos a descargar para esta simulación.
         # En su lugar, la imagen mostrada será un placeholder, pero crearemos un archivo dummy para la ruta.
         with open(generated_file_path, "w") as f: # Crear un archivo dummy
@@ -557,7 +539,7 @@ class MainApp:
         app_bar = ft.AppBar(
             title=ft.Text("APT-TX | Simulador de Pases Satelitales NOAA"),
             center_title=False,
-            bgcolor=ft.Colors.SURFACE, # Un color un poco más distintivo
+            bgcolor=ft.Colors.SURFACE,
             actions=[
                 ft.PopupMenuButton(
                     items=[
