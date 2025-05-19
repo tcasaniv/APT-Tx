@@ -4,11 +4,4 @@ matplotlib
 requests
 pillow
 scipy
-os
-time
-platform
-subprocess
-shutil
-requests
 pathlib
-sys 
