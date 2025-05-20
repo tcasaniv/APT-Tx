@@ -82,12 +82,33 @@ blocks:
     coordinate: [880, 16.0]
     rotation: 0
     state: enabled
-- name: gain_sdr_tx
+- name: lna_sdr_tx
+  id: variable_qtgui_range
+  parameters:
+    comment: ''
+    gui_hint: 0,5,1,1
+    label: Ganancia LNA Tx | IF
+    min_len: '200'
+    orient: QtCore.Qt.Horizontal
+    rangeType: float
+    start: '0'
+    step: '8'
+    stop: '40'
+    value: '0'
+    widget: counter_slider
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [1152, 376.0]
+    rotation: 0
+    state: enabled
+- name: vga_sdr_tx
   id: variable_qtgui_range
   parameters:
     comment: ''
     gui_hint: 0,4,1,1
-    label: Ganancia Tx
+    label: Ganancia VGA Tx
     min_len: '200'
     orient: QtCore.Qt.Horizontal
     rangeType: float
@@ -559,7 +580,7 @@ blocks:
     dev_args: ''
     samp_rate: samp_rate_sdr
     type: fc32
-    vga: gain_sdr_tx
+    vga: vga_sdr_tx
   states:
     bus_sink: false
     bus_source: false
