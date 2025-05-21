@@ -117,7 +117,16 @@ def apt_encoder(preproc_a_path:Img, preproc_b_path:Img, output_APT_img_path:str)
             telemetryB_pixels = np.ones(45, dtype=np.int16) * 128
 
         # Concatenar para hacer una fila entera de la imagen
-        row = np.concatenate((syncA_pixels, spaceB_pixels if minute_marker else spaceA_pixels, videoA_pixels[line], telemetryA_pixels, syncB_pixels, spaceA_pixels if minute_marker else spaceB_pixels, videoB_pixels[line], telemetryB_pixels))
+        row = np.concatenate((
+            syncA_pixels,
+            spaceB_pixels if minute_marker else spaceA_pixels,
+            videoA_pixels[line],
+            telemetryA_pixels,
+            syncB_pixels,
+            spaceA_pixels if minute_marker else spaceB_pixels,
+            videoB_pixels[line],
+            telemetryB_pixels
+        ))
 
         # Cambia la fila vacía de la imagen por la fila recién concatenada
         image_pixels[line] = row
