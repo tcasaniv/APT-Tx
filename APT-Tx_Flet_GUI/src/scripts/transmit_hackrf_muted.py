@@ -5,7 +5,7 @@
 # SPDX-License-Identifier: GPL-3.0
 #
 # GNU Radio Python Flow Graph
-# Title: transmit_hackrf
+# Title: transmit_hackrf_muted
 # Author: tcasaniv
 # GNU Radio version: 3.10.9.2
 
@@ -14,7 +14,6 @@ from gnuradio import qtgui
 from PyQt5 import QtCore
 from PyQt5.QtCore import QObject, pyqtSlot
 from gnuradio import analog
-from gnuradio import audio
 from gnuradio import blocks
 from gnuradio import filter
 from gnuradio.filter import firdes
@@ -35,9 +34,9 @@ import transmit_hackrf_detect_platform as detect_platform  # embedded python mod
 class transmit_hackrf(gr.top_block, Qt.QWidget):
 
     def __init__(self, freq_sdr=928e6, samp_rate_sdr=8e6, wavfile=detect_platform.wav_path):
-        gr.top_block.__init__(self, "transmit_hackrf", catch_exceptions=True)
+        gr.top_block.__init__(self, "transmit_hackrf_muted", catch_exceptions=True)
         Qt.QWidget.__init__(self)
-        self.setWindowTitle("transmit_hackrf")
+        self.setWindowTitle("transmit_hackrf_muted")
         qtgui.util.check_set_qss()
         try:
             self.setWindowIcon(Qt.QIcon.fromTheme('gnuradio-grc'))
@@ -55,7 +54,7 @@ class transmit_hackrf(gr.top_block, Qt.QWidget):
         self.top_grid_layout = Qt.QGridLayout()
         self.top_layout.addLayout(self.top_grid_layout)
 
-        self.settings = Qt.QSettings("GNU Radio", "transmit_hackrf")
+        self.settings = Qt.QSettings("GNU Radio", "transmit_hackrf_muted")
 
         try:
             geometry = self.settings.value("geometry")
@@ -228,7 +227,6 @@ class transmit_hackrf(gr.top_block, Qt.QWidget):
                 taps=[],
                 fractional_bw=0)
         self.control_volume = blocks.multiply_const_ff((volume/100))
-        self.audio_sink = audio.sink(12000, '', True)
         self.audio_rational_resampler = filter.rational_resampler_fff(
                 interpolation=12000,
                 decimation=audio_rate,
@@ -326,19 +324,11 @@ class transmit_hackrf(gr.top_block, Qt.QWidget):
         	max_dev=max_deviation,
         	fh=(-1.0),
                 )
-        self.analog_nbfm_rx = analog.nbfm_rx(
-        	audio_rate=12000,
-        	quad_rate=int(fm_rate),
-        	tau=(75e-6),
-        	max_dev=max_deviation,
-          )
 
 
         ##################################################
         # Connections
         ##################################################
-        self.connect((self.analog_nbfm_rx, 0), (self.audio_sink, 0))
-        self.connect((self.analog_nbfm_tx, 0), (self.analog_nbfm_rx, 0))
         self.connect((self.analog_nbfm_tx, 0), (self.fm_rational_resampler, 0))
         self.connect((self.analog_nbfm_tx, 0), (self.soapy_hackrf_sink, 0))
         self.connect((self.analog_nbfm_tx, 0), (self.throttle_fm_gui_1, 0))
@@ -352,7 +342,7 @@ class transmit_hackrf(gr.top_block, Qt.QWidget):
 
 
     def closeEvent(self, event):
-        self.settings = Qt.QSettings("GNU Radio", "transmit_hackrf")
+        self.settings = Qt.QSettings("GNU Radio", "transmit_hackrf_muted")
         self.settings.setValue("geometry", self.saveGeometry())
         self.stop()
         self.wait()
@@ -401,7 +391,6 @@ class transmit_hackrf(gr.top_block, Qt.QWidget):
 
     def set_max_deviation(self, max_deviation):
         self.max_deviation = max_deviation
-        self.analog_nbfm_rx.set_max_deviation(self.max_deviation)
         self.analog_nbfm_tx.set_max_deviation(self.max_deviation)
 
     def get_freq(self):

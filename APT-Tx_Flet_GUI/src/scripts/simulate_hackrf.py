@@ -5,7 +5,7 @@
 # SPDX-License-Identifier: GPL-3.0
 #
 # GNU Radio Python Flow Graph
-# Title: transmit_hackrf
+# Title: simulate_hackrf
 # Author: tcasaniv
 # GNU Radio version: 3.10.9.2
 
@@ -26,7 +26,6 @@ from PyQt5 import Qt
 from argparse import ArgumentParser
 from gnuradio.eng_arg import eng_float, intx
 from gnuradio import eng_notation
-from gnuradio import soapy
 import sip
 import transmit_hackrf_detect_platform as detect_platform  # embedded python module
 
@@ -35,9 +34,9 @@ import transmit_hackrf_detect_platform as detect_platform  # embedded python mod
 class transmit_hackrf(gr.top_block, Qt.QWidget):
 
     def __init__(self, freq_sdr=928e6, samp_rate_sdr=8e6, wavfile=detect_platform.wav_path):
-        gr.top_block.__init__(self, "transmit_hackrf", catch_exceptions=True)
+        gr.top_block.__init__(self, "simulate_hackrf", catch_exceptions=True)
         Qt.QWidget.__init__(self)
-        self.setWindowTitle("transmit_hackrf")
+        self.setWindowTitle("simulate_hackrf")
         qtgui.util.check_set_qss()
         try:
             self.setWindowIcon(Qt.QIcon.fromTheme('gnuradio-grc'))
@@ -55,7 +54,7 @@ class transmit_hackrf(gr.top_block, Qt.QWidget):
         self.top_grid_layout = Qt.QGridLayout()
         self.top_layout.addLayout(self.top_grid_layout)
 
-        self.settings = Qt.QSettings("GNU Radio", "transmit_hackrf")
+        self.settings = Qt.QSettings("GNU Radio", "simulate_hackrf")
 
         try:
             geometry = self.settings.value("geometry")
@@ -118,68 +117,9 @@ class transmit_hackrf(gr.top_block, Qt.QWidget):
             self.top_grid_layout.setRowStretch(r, 1)
         for c in range(0, 1):
             self.top_grid_layout.setColumnStretch(c, 1)
-        self._freq_msgdigctl_win = qtgui.MsgDigitalNumberControl(lbl='Frecuencia de transmisión', min_freq_hz=1e6, max_freq_hz=6e9, parent=self, thousands_separator=",", background_color="black", fontColor="white", var_callback=self.set_freq, outputmsgname='freq')
-        self._freq_msgdigctl_win.setValue(freq_sdr)
-        self._freq_msgdigctl_win.setReadOnly(False)
-        self.freq = self._freq_msgdigctl_win
-
-        self.top_grid_layout.addWidget(self._freq_msgdigctl_win, 0, 0, 1, 1)
-        for r in range(0, 1):
-            self.top_grid_layout.setRowStretch(r, 1)
-        for c in range(0, 1):
-            self.top_grid_layout.setColumnStretch(c, 1)
-        # Create the options list
-        self._RF_hackrf_tx_options = [False, True]
-        # Create the labels list
-        self._RF_hackrf_tx_labels = ['Desactivado', 'Activado (+11 dB)']
-        # Create the combo box
-        # Create the radio buttons
-        self._RF_hackrf_tx_group_box = Qt.QGroupBox("RF Amp TX" + ": ")
-        self._RF_hackrf_tx_box = Qt.QVBoxLayout()
-        class variable_chooser_button_group(Qt.QButtonGroup):
-            def __init__(self, parent=None):
-                Qt.QButtonGroup.__init__(self, parent)
-            @pyqtSlot(int)
-            def updateButtonChecked(self, button_id):
-                self.button(button_id).setChecked(True)
-        self._RF_hackrf_tx_button_group = variable_chooser_button_group()
-        self._RF_hackrf_tx_group_box.setLayout(self._RF_hackrf_tx_box)
-        for i, _label in enumerate(self._RF_hackrf_tx_labels):
-            radio_button = Qt.QRadioButton(_label)
-            self._RF_hackrf_tx_box.addWidget(radio_button)
-            self._RF_hackrf_tx_button_group.addButton(radio_button, i)
-        self._RF_hackrf_tx_callback = lambda i: Qt.QMetaObject.invokeMethod(self._RF_hackrf_tx_button_group, "updateButtonChecked", Qt.Q_ARG("int", self._RF_hackrf_tx_options.index(i)))
-        self._RF_hackrf_tx_callback(self.RF_hackrf_tx)
-        self._RF_hackrf_tx_button_group.buttonClicked[int].connect(
-            lambda i: self.set_RF_hackrf_tx(self._RF_hackrf_tx_options[i]))
-        self.top_grid_layout.addWidget(self._RF_hackrf_tx_group_box, 0, 4, 2, 1)
-        for r in range(0, 2):
-            self.top_grid_layout.setRowStretch(r, 1)
-        for c in range(4, 5):
-            self.top_grid_layout.setColumnStretch(c, 1)
-        self._IF_hackrf_tx_range = qtgui.Range(0, 47, 1, 0, 200)
-        self._IF_hackrf_tx_win = qtgui.RangeWidget(self._IF_hackrf_tx_range, self.set_IF_hackrf_tx, "Ganancia IF TX", "counter_slider", float, QtCore.Qt.Horizontal)
-        self.top_grid_layout.addWidget(self._IF_hackrf_tx_win, 1, 2, 1, 1)
-        for r in range(1, 2):
-            self.top_grid_layout.setRowStretch(r, 1)
-        for c in range(2, 3):
-            self.top_grid_layout.setColumnStretch(c, 1)
         self.wavfile_source = blocks.wavfile_source(wav_path, True)
         self.throttle_sdr_gui = blocks.throttle( gr.sizeof_gr_complex*1, samp_rate_sdr, True, 0 if "auto" == "auto" else max( int(float(0.1) * samp_rate_sdr) if "auto" == "time" else int(0.1), 1) )
         self.throttle_fm_gui_1 = blocks.throttle( gr.sizeof_gr_complex*1, fm_rate, True, 0 if "auto" == "auto" else max( int(float(0.1) * fm_rate) if "auto" == "time" else int(0.1), 1) )
-        self.soapy_hackrf_sink = None
-        dev = 'driver=hackrf'
-        stream_args = ''
-        tune_args = ['']
-        settings = ['']
-
-        self.soapy_hackrf_sink = soapy.sink(dev, "fc32", 1, '',
-                                  stream_args, tune_args, settings)
-        self.soapy_hackrf_sink.set_sample_rate(0, samp_rate_sdr)
-        self.soapy_hackrf_sink.set_bandwidth(0, 1.75e6)
-        self.soapy_hackrf_sink.set_frequency(0, freq)
-        self.soapy_hackrf_sink.set_gain(0, 'AMP', RF_hackrf_tx)
-        self.soapy_hackrf_sink.set_gain(0, 'VGA', min(max(IF_hackrf_tx, 0.0), 47.0))
         self.sdr_gui_freq_sink = qtgui.freq_sink_c(
             1024, #size
             window.WIN_BLACKMAN_hARRIS, #wintype
@@ -222,6 +162,16 @@ class transmit_hackrf(gr.top_block, Qt.QWidget):
 
         self._sdr_gui_freq_sink_win = sip.wrapinstance(self.sdr_gui_freq_sink.qwidget(), Qt.QWidget)
         self.tab_widget_layout_2.addWidget(self._sdr_gui_freq_sink_win)
+        self._freq_msgdigctl_win = qtgui.MsgDigitalNumberControl(lbl='Frecuencia de transmisión', min_freq_hz=1e6, max_freq_hz=6e9, parent=self, thousands_separator=",", background_color="black", fontColor="white", var_callback=self.set_freq, outputmsgname='freq')
+        self._freq_msgdigctl_win.setValue(freq_sdr)
+        self._freq_msgdigctl_win.setReadOnly(False)
+        self.freq = self._freq_msgdigctl_win
+
+        self.top_grid_layout.addWidget(self._freq_msgdigctl_win, 0, 0, 1, 1)
+        for r in range(0, 1):
+            self.top_grid_layout.setRowStretch(r, 1)
+        for c in range(0, 1):
+            self.top_grid_layout.setColumnStretch(c, 1)
         self.fm_rational_resampler = filter.rational_resampler_ccc(
                 interpolation=int(samp_rate_sdr),
                 decimation=int(fm_rate),
@@ -332,6 +282,42 @@ class transmit_hackrf(gr.top_block, Qt.QWidget):
         	tau=(75e-6),
         	max_dev=max_deviation,
           )
+        # Create the options list
+        self._RF_hackrf_tx_options = [False, True]
+        # Create the labels list
+        self._RF_hackrf_tx_labels = ['Desactivado', 'Activado (+11 dB)']
+        # Create the combo box
+        # Create the radio buttons
+        self._RF_hackrf_tx_group_box = Qt.QGroupBox("RF Amp TX" + ": ")
+        self._RF_hackrf_tx_box = Qt.QVBoxLayout()
+        class variable_chooser_button_group(Qt.QButtonGroup):
+            def __init__(self, parent=None):
+                Qt.QButtonGroup.__init__(self, parent)
+            @pyqtSlot(int)
+            def updateButtonChecked(self, button_id):
+                self.button(button_id).setChecked(True)
+        self._RF_hackrf_tx_button_group = variable_chooser_button_group()
+        self._RF_hackrf_tx_group_box.setLayout(self._RF_hackrf_tx_box)
+        for i, _label in enumerate(self._RF_hackrf_tx_labels):
+            radio_button = Qt.QRadioButton(_label)
+            self._RF_hackrf_tx_box.addWidget(radio_button)
+            self._RF_hackrf_tx_button_group.addButton(radio_button, i)
+        self._RF_hackrf_tx_callback = lambda i: Qt.QMetaObject.invokeMethod(self._RF_hackrf_tx_button_group, "updateButtonChecked", Qt.Q_ARG("int", self._RF_hackrf_tx_options.index(i)))
+        self._RF_hackrf_tx_callback(self.RF_hackrf_tx)
+        self._RF_hackrf_tx_button_group.buttonClicked[int].connect(
+            lambda i: self.set_RF_hackrf_tx(self._RF_hackrf_tx_options[i]))
+        self.top_grid_layout.addWidget(self._RF_hackrf_tx_group_box, 0, 4, 2, 1)
+        for r in range(0, 2):
+            self.top_grid_layout.setRowStretch(r, 1)
+        for c in range(4, 5):
+            self.top_grid_layout.setColumnStretch(c, 1)
+        self._IF_hackrf_tx_range = qtgui.Range(0, 47, 1, 0, 200)
+        self._IF_hackrf_tx_win = qtgui.RangeWidget(self._IF_hackrf_tx_range, self.set_IF_hackrf_tx, "Ganancia IF TX", "counter_slider", float, QtCore.Qt.Horizontal)
+        self.top_grid_layout.addWidget(self._IF_hackrf_tx_win, 1, 2, 1, 1)
+        for r in range(1, 2):
+            self.top_grid_layout.setRowStretch(r, 1)
+        for c in range(2, 3):
+            self.top_grid_layout.setColumnStretch(c, 1)
 
 
         ##################################################
@@ -340,7 +326,6 @@ class transmit_hackrf(gr.top_block, Qt.QWidget):
         self.connect((self.analog_nbfm_rx, 0), (self.audio_sink, 0))
         self.connect((self.analog_nbfm_tx, 0), (self.analog_nbfm_rx, 0))
         self.connect((self.analog_nbfm_tx, 0), (self.fm_rational_resampler, 0))
-        self.connect((self.analog_nbfm_tx, 0), (self.soapy_hackrf_sink, 0))
         self.connect((self.analog_nbfm_tx, 0), (self.throttle_fm_gui_1, 0))
         self.connect((self.audio_rational_resampler, 0), (self.analog_nbfm_tx, 0))
         self.connect((self.audio_rational_resampler, 0), (self.audio_gui_freq_sink, 0))
@@ -352,7 +337,7 @@ class transmit_hackrf(gr.top_block, Qt.QWidget):
 
 
     def closeEvent(self, event):
-        self.settings = Qt.QSettings("GNU Radio", "transmit_hackrf")
+        self.settings = Qt.QSettings("GNU Radio", "simulate_hackrf")
         self.settings.setValue("geometry", self.saveGeometry())
         self.stop()
         self.wait()
@@ -373,7 +358,6 @@ class transmit_hackrf(gr.top_block, Qt.QWidget):
     def set_samp_rate_sdr(self, samp_rate_sdr):
         self.samp_rate_sdr = samp_rate_sdr
         self.sdr_gui_freq_sink.set_frequency_range(self.freq_sdr, self.samp_rate_sdr)
-        self.soapy_hackrf_sink.set_sample_rate(0, self.samp_rate_sdr)
         self.throttle_sdr_gui.set_sample_rate(self.samp_rate_sdr)
 
     def get_wavfile(self):
@@ -409,7 +393,6 @@ class transmit_hackrf(gr.top_block, Qt.QWidget):
 
     def set_freq(self, freq):
         self.freq = freq
-        self.soapy_hackrf_sink.set_frequency(0, self.freq)
 
     def get_fm_rate(self):
         return self.fm_rate
@@ -431,14 +414,12 @@ class transmit_hackrf(gr.top_block, Qt.QWidget):
     def set_RF_hackrf_tx(self, RF_hackrf_tx):
         self.RF_hackrf_tx = RF_hackrf_tx
         self._RF_hackrf_tx_callback(self.RF_hackrf_tx)
-        self.soapy_hackrf_sink.set_gain(0, 'AMP', self.RF_hackrf_tx)
 
     def get_IF_hackrf_tx(self):
         return self.IF_hackrf_tx
 
     def set_IF_hackrf_tx(self, IF_hackrf_tx):
         self.IF_hackrf_tx = IF_hackrf_tx
-        self.soapy_hackrf_sink.set_gain(0, 'VGA', min(max(self.IF_hackrf_tx, 0.0), 47.0))
 
 
 
