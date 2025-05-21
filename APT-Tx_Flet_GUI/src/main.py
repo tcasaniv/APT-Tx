@@ -39,8 +39,12 @@ generated_wav_path = None
 # Debes crear estos scripts en la carpeta "scripts" o donde corresponda
 scripts_config = {
     "Simulación (Audio/Gráfica)": "simulate_fm.py",
-    "HackRF (Transmitir Real)": "transmit_hackrf.py",
-    "USRP (Transmitir Real)": "transmit_usrp.py",
+    "HackRF (Simulación)": "simulate_hackrf.py",
+    "HackRF (Transmisión Real en silencio)": "transmit_hackrf_muted.py",
+    "HackRF (Transmisión Real)": "transmit_hackrf.py",
+    "USRP (Simulación)": "transmit_usrp.py",
+    "USRP (Transmisión Real en silencio)": "transmit_usrp.py",
+    "USRP (Transmisión Real)": "transmit_usrp.py",
 }
 
 # --- Funciones de Utilidad ---
@@ -64,7 +68,7 @@ def get_app_files_dir():
 def get_scripts_dir():
     """Obtiene la ruta a la carpeta de scripts de GNU Radio y la crea si no existe."""
     # Por defecto, busca la carpeta 'scripts' junto al ejecutable o script principal.
-    # Podrías cambiar esto para que use get_app_files_dir() si prefieres.
+    # Se puede cambiar esto para que use get_app_files_dir().
     scripts_dir = get_app_base_dir() / SCRIPTS_DIR_NAME
     scripts_dir.mkdir(parents=True, exist_ok=True)
     return str(scripts_dir)
