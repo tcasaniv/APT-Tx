@@ -82,11 +82,14 @@ def apt_encoder(preproc_a_path:Img, preproc_b_path:Img, output_APT_img_path:str)
     spaceA_pixels = np.zeros(47, dtype=np.int16)
     spaceB_pixels = np.ones(47, dtype=np.int16) * 255
 
+    # Definir la altura de la imagen APT elegiendo la menor altura entre las dos imágenes
+    height_APT_image = min(PIL_imgA.height, PIL_imgB.height)
+
     # Crear una matriz vacía para nuestra imagen final
-    image_pixels = np.zeros(shape=(PIL_imgA.height, 2080))
+    image_pixels = np.zeros(shape=(height_APT_image, 2080))
 
     # Recorre cada línea de píxeles para crear la imagen final
-    for line in range(0, PIL_imgA.height):
+    for line in range(0, height_APT_image):
         minute_marker = line % 120 == 0 # esta línea contendrá un marcador de minutos en los espacios
 
         # Telemetría
