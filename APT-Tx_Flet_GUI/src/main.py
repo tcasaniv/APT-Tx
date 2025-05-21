@@ -7,7 +7,7 @@ import shutil
 import requests # Para descargar imágenes desde URL
 from pathlib import Path # Para manejo de rutas más robusto
 import sys # Necesario para sys.executable y sys.frozen
-from utils import preprocesar_img_to_APT as preproc_img
+from utils import apt_encoder, modulate_APT_img_to_audio, preprocesar_img_to_APT as preproc_img
 
 VERSION_APP="v0.1.0"
 
@@ -94,9 +94,9 @@ def open_file_with_default_program(filepath):
         print(f"Error al abrir '{filepath}': {e}")
         return False
 
-## --- Funciones de Lógica (Simuladas) ---
-# (preprocessing_img, apt_encoding_img, audio_apt_generation permanecen mayormente iguales,
-#  pero ahora se asume que image_X_source_path es local tras la descarga)
+## --- Funciones de Lógica --
+# (preprocessing_img, apt_encoding_img, audio_apt_generation
+#  asumen que image_X_source_path es local tras la descarga)
 
 
 def reset_downstream_processing(page: ft.Page, from_step: str):
@@ -141,7 +141,6 @@ def preprocessing_img(page: ft.Page, image_name_suffix: str, status_bar_text_ref
     generated_file_path = str(Path(get_app_files_dir()) / output_filename)
 
     try:
-        # shutil.copy(source_image_path_val, generated_file_path)
         preproc_img(source_image_path_val, generated_file_path,image_name_suffix)
         preprocessed_image_display_ref.src = generated_file_path
         preprocessed_image_display_ref.update()
@@ -173,8 +172,7 @@ def apt_encoding_img(page: ft.Page, status_label, apt_image_display,
     generated_file_path = str(Path(get_app_files_dir()) / output_filename)
     
     try:
-        # Simulación: Copiamos la primera imagen preprocesada como si fuera la imagen APT
-        shutil.copy(preproc_a_path, generated_file_path)
+        apt_encoder(preproc_a_path, preproc_b_path, generated_file_path)
         apt_image_display.src = generated_file_path # Mostrar la imagen generada
         apt_image_display.update()
         status_label.value = f"Imágenes codificadas a APT. Guardada como: {output_filename}"
@@ -199,20 +197,15 @@ def audio_apt_generation(page: ft.Page, status_label, audio_status_text, apt_img
 
     status_label.value = "Generando audio APT..."
     page.update()
-    time.sleep(2)
 
     output_filename = f"apt_generated_audio_{int(time.time())}.wav"
     generated_file_path = str(Path(get_app_files_dir()) / output_filename)
 
     try:
-        # Simulación: Crear un archivo WAV dummy (vacío o con contenido simple)
-        with open(generated_file_path, "w") as f:
-            f.write("RIFF....WAVEfmt ....data....") # Encabezado WAV muy simplificado
-        
-        # Simular duración
-        duration_text = "00:30 (simulado)" # Puedes implementar una lectura real si usas una librería de audio
+        duration = modulate_APT_img_to_audio(apt_img_path_val, generated_file_path)
+        duration_text = f"{duration} seg"
 
-        audio_status_text.value = f"Audio APT generado: {output_filename}. Duración: {duration_text}"
+        audio_status_text.value = f"Audio APT generado: {output_filename}.\nDuración: {duration_text}"
         audio_status_text.update()
         status_label.value = "Audio APT generado."
         page.update()
