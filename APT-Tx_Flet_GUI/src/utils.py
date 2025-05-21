@@ -132,37 +132,42 @@ def modulate_APT_img_to_audio(APT_img_path:Img, APT_WAV_path:str, output_sample_
 
     # Abrir la imagen
     try:
+        print(f"Abrir imagen APT desde: {APT_img_path}")
         APT_image = Img.open(APT_img_path)
     except Exception as e:
         print(f"No se pudo abrir la imagen. Error: {e}")
         return  # Sal del método si no se puede abrir la imagen
     
     # Aplanar la matriz de píxeles de la imagen a una matriz 1D y normalizarla
+    print("Convirtiendo la imagen a un arreglo 1D y normalizando valores a [0,1]")
     image_pixels = np.asarray(APT_image).flatten() / 255
 
     # Generar una onda portadora a 2400 Hz
     sample_rate = 2080 * 20
     duration = 0.5 * APT_image.height
     n_samples = int(duration * sample_rate)
+    print(f"Configurando portadora: frecuencia=2400Hz, sample_rate={sample_rate}, duración={duration}s, muestras={n_samples}")
 
     time = np.linspace(0, duration, n_samples)
     carrier = 1023 * np.sin(2 * np.pi * 2400 * time)
+    print("Portadora generada.")
 
     # Escala la señal para que coincida con el número de muestra de la portadora
     scale = n_samples // len(image_pixels)
+    print(f"Repitiendo cada valor de pixel {scale} veces para igualar la longitud de la portadora")
     signal = np.repeat(image_pixels, scale)
 
     # Modula en amplitud la portadora con la señal de 256 niveles.
+    print("Modulando en amplitud la portadora con la señal de la imagen.")
     modulated = carrier * signal
-
-
 
     # Remuestrea el audio a la velocidad deseada
     n_samples = int(output_sample_rate * duration)
+    print(f"Remuestreando audio a {output_sample_rate} Hz, muestras finales: {n_samples}")
     modulated = sps.resample(modulated, n_samples)
 
-
     # Guardar el audio como archivo WAV
+    print(f"Guardando el audio modulado en: {APT_WAV_path}")
     modulated_int16 = modulated.astype(np.int16)
     wav.write(APT_WAV_path, output_sample_rate, modulated_int16)
     print(f"\nGuardado audio en:\n{APT_WAV_path}\n")
