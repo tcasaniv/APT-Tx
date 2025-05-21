@@ -53,20 +53,25 @@ def preprocesar_img_to_APT(ruta_entrada_img:str, ruta_salida_img: str,image_name
     # Codificar imagen en APT
 def apt_encoder(preproc_a_path:Img, preproc_b_path:Img, output_APT_img_path:str):
     print("|-------- APT Encoder --------|")
+    print("Abriendo imágenes preprocesadas para codificación APT...")
 
     # Abrir la imagen
     try:
         PIL_imgA = Img.open(preproc_a_path)
         PIL_imgB = Img.open(preproc_b_path)
+        print(f"Imagen A cargada: {preproc_a_path} tamaño: {PIL_imgA.size}")
+        print(f"Imagen B cargada: {preproc_b_path} tamaño: {PIL_imgB.size}")
     except Exception as e:
         print(f"No se pudo abrir las imágenes. Error: {e}")
         return  # Sal del método si no se puede abrir las imágenes
 
     # Convertir la imagen en una matriz de 256 niveles de cada línea de píxeles, es decir, una matriz 2D de array[row][col].
+    print("Convirtiendo imágenes a matrices numpy...")
     videoA_pixels = np.asarray(PIL_imgA)
     videoB_pixels = np.asarray(PIL_imgB)
 
     # Definir las palabras de sincronización para las imágenes A y B
+    print("Definiendo palabras de sincronización para las imágenes A y B...")
     SYNCA = "000011001100110011001100110011000000000"
     SYNCB = "000011100111001110011100111001110011100"
 
@@ -84,10 +89,13 @@ def apt_encoder(preproc_a_path:Img, preproc_b_path:Img, output_APT_img_path:str)
 
     # Definir la altura de la imagen APT elegiendo la menor altura entre las dos imágenes
     height_APT_image = min(PIL_imgA.height, PIL_imgB.height)
+    print(f"Altura de la imagen APT: {height_APT_image} (mínimo entre ambas imágenes)")
 
     # Crear una matriz vacía para nuestra imagen final
+    print("Creando matriz vacía para la imagen APT final...")
     image_pixels = np.zeros(shape=(height_APT_image, 2080))
 
+    print("Comenzando a construir cada línea de la imagen APT...")
     # Recorre cada línea de píxeles para crear la imagen final
     for line in range(0, height_APT_image):
         minute_marker = line % 120 == 0 # esta línea contendrá un marcador de minutos en los espacios
@@ -114,7 +122,7 @@ def apt_encoder(preproc_a_path:Img, preproc_b_path:Img, output_APT_img_path:str)
         # Cambia la fila vacía de la imagen por la fila recién concatenada
         image_pixels[line] = row
 
-
+    print("Conversión de matriz numpy a imagen PIL...")
     # Vuelve a convertir la matriz de píxeles en una imagen PIL
     image_pixels = image_pixels.astype(np.uint8)
     imageTx = Img.fromarray(image_pixels)
