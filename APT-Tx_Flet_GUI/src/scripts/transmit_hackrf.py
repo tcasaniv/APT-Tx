@@ -12,6 +12,7 @@
 from PyQt5 import Qt
 from gnuradio import qtgui
 from PyQt5 import QtCore
+from PyQt5.QtCore import QObject, pyqtSlot
 from gnuradio import analog
 from gnuradio import audio
 from gnuradio import blocks
@@ -25,6 +26,7 @@ from PyQt5 import Qt
 from argparse import ArgumentParser
 from gnuradio.eng_arg import eng_float, intx
 from gnuradio import eng_notation
+from gnuradio import soapy
 import sip
 import transmit_hackrf_detect_platform as detect_platform  # embedded python module
 
@@ -32,7 +34,7 @@ import transmit_hackrf_detect_platform as detect_platform  # embedded python mod
 
 class transmit_hackrf(gr.top_block, Qt.QWidget):
 
-    def __init__(self, samp_rate_sdr=8e6, wavfile=detect_platform.wav_path):
+    def __init__(self, freq_sdr=928e6, samp_rate_sdr=8e6, wavfile=detect_platform.wav_path):
         gr.top_block.__init__(self, "transmit_hackrf", catch_exceptions=True)
         Qt.QWidget.__init__(self)
         self.setWindowTitle("transmit_hackrf")
@@ -65,6 +67,7 @@ class transmit_hackrf(gr.top_block, Qt.QWidget):
         ##################################################
         # Parameters
         ##################################################
+        self.freq_sdr = freq_sdr
         self.samp_rate_sdr = samp_rate_sdr
         self.wavfile = wavfile
 
@@ -73,10 +76,12 @@ class transmit_hackrf(gr.top_block, Qt.QWidget):
         ##################################################
         self.wav_path = wav_path = wavfile
         self.volume = volume = 50
-        self.gain_sdr_tx = gain_sdr_tx = 0
-        self.freq = freq = 928e6
+        self.max_deviation = max_deviation = 17e3
+        self.freq = freq = freq_sdr
         self.fm_rate = fm_rate = 48e3
         self.audio_rate = audio_rate = 11025
+        self.RF_hackrf_tx = RF_hackrf_tx = False
+        self.IF_hackrf_tx = IF_hackrf_tx = 0
 
         ##################################################
         # Blocks
@@ -84,32 +89,37 @@ class transmit_hackrf(gr.top_block, Qt.QWidget):
 
         self._volume_range = qtgui.Range(0, 300, 1, 50, 200)
         self._volume_win = qtgui.RangeWidget(self._volume_range, self.set_volume, "Volumen", "counter_slider", float, QtCore.Qt.Horizontal)
-        self.top_grid_layout.addWidget(self._volume_win, 0, 2, 1, 2)
+        self.top_grid_layout.addWidget(self._volume_win, 0, 2, 1, 1)
         for r in range(0, 1):
             self.top_grid_layout.setRowStretch(r, 1)
-        for c in range(2, 4):
+        for c in range(2, 3):
             self.top_grid_layout.setColumnStretch(c, 1)
-        self.wavfile_source = blocks.wavfile_source(wav_path, True)
-        self.throttle_fm_gui = blocks.throttle( gr.sizeof_gr_complex*1, samp_rate_sdr, True, 0 if "auto" == "auto" else max( int(float(0.1) * samp_rate_sdr) if "auto" == "time" else int(0.1), 1) )
-        self.rational_resampler_0 = filter.rational_resampler_fff(
-                interpolation=12000,
-                decimation=audio_rate,
-                taps=[],
-                fractional_bw=0)
-        self.rational_resampler = filter.rational_resampler_ccc(
-                interpolation=int(samp_rate_sdr),
-                decimation=int(fm_rate),
-                taps=[],
-                fractional_bw=0)
-        self._gain_sdr_tx_range = qtgui.Range(0, 47, 1, 0, 200)
-        self._gain_sdr_tx_win = qtgui.RangeWidget(self._gain_sdr_tx_range, self.set_gain_sdr_tx, "Ganancia Tx", "counter_slider", float, QtCore.Qt.Horizontal)
-        self.top_grid_layout.addWidget(self._gain_sdr_tx_win, 0, 4, 1, 1)
-        for r in range(0, 1):
+        self.tab_widget = Qt.QTabWidget()
+        self.tab_widget_widget_0 = Qt.QWidget()
+        self.tab_widget_layout_0 = Qt.QBoxLayout(Qt.QBoxLayout.TopToBottom, self.tab_widget_widget_0)
+        self.tab_widget_grid_layout_0 = Qt.QGridLayout()
+        self.tab_widget_layout_0.addLayout(self.tab_widget_grid_layout_0)
+        self.tab_widget.addTab(self.tab_widget_widget_0, 'APT generado')
+        self.tab_widget_widget_1 = Qt.QWidget()
+        self.tab_widget_layout_1 = Qt.QBoxLayout(Qt.QBoxLayout.TopToBottom, self.tab_widget_widget_1)
+        self.tab_widget_grid_layout_1 = Qt.QGridLayout()
+        self.tab_widget_layout_1.addLayout(self.tab_widget_grid_layout_1)
+        self.tab_widget.addTab(self.tab_widget_widget_1, 'APT Modulado en FM')
+        self.tab_widget_widget_2 = Qt.QWidget()
+        self.tab_widget_layout_2 = Qt.QBoxLayout(Qt.QBoxLayout.TopToBottom, self.tab_widget_widget_2)
+        self.tab_widget_grid_layout_2 = Qt.QGridLayout()
+        self.tab_widget_layout_2.addLayout(self.tab_widget_grid_layout_2)
+        self.tab_widget.addTab(self.tab_widget_widget_2, 'Señal transmitiéndose por el HackRF')
+        self.top_layout.addWidget(self.tab_widget)
+        self._max_deviation_range = qtgui.Range(2.5e3, fm_rate/2, 0.5e3, 17e3, 200)
+        self._max_deviation_win = qtgui.RangeWidget(self._max_deviation_range, self.set_max_deviation, "Máxima Desviación FM", "counter_slider", float, QtCore.Qt.Horizontal)
+        self.top_grid_layout.addWidget(self._max_deviation_win, 1, 0, 1, 1)
+        for r in range(1, 2):
             self.top_grid_layout.setRowStretch(r, 1)
-        for c in range(4, 5):
+        for c in range(0, 1):
             self.top_grid_layout.setColumnStretch(c, 1)
-        self._freq_msgdigctl_win = qtgui.MsgDigitalNumberControl(lbl='Frecuencia de transmisión', min_freq_hz=88e6, max_freq_hz=1700e6, parent=self, thousands_separator=",", background_color="black", fontColor="white", var_callback=self.set_freq, outputmsgname='freq')
-        self._freq_msgdigctl_win.setValue(928e6)
+        self._freq_msgdigctl_win = qtgui.MsgDigitalNumberControl(lbl='Frecuencia de transmisión', min_freq_hz=1e6, max_freq_hz=6e9, parent=self, thousands_separator=",", background_color="black", fontColor="white", var_callback=self.set_freq, outputmsgname='freq')
+        self._freq_msgdigctl_win.setValue(freq_sdr)
         self._freq_msgdigctl_win.setReadOnly(False)
         self.freq = self._freq_msgdigctl_win
 
@@ -118,29 +128,81 @@ class transmit_hackrf(gr.top_block, Qt.QWidget):
             self.top_grid_layout.setRowStretch(r, 1)
         for c in range(0, 1):
             self.top_grid_layout.setColumnStretch(c, 1)
-        self.fm_gui_freq_sink = qtgui.freq_sink_c(
-            4096, #size
+        # Create the options list
+        self._RF_hackrf_tx_options = [False, True]
+        # Create the labels list
+        self._RF_hackrf_tx_labels = ['Desactivado', 'Activado (+11 dB)']
+        # Create the combo box
+        # Create the radio buttons
+        self._RF_hackrf_tx_group_box = Qt.QGroupBox("RF Amp TX" + ": ")
+        self._RF_hackrf_tx_box = Qt.QVBoxLayout()
+        class variable_chooser_button_group(Qt.QButtonGroup):
+            def __init__(self, parent=None):
+                Qt.QButtonGroup.__init__(self, parent)
+            @pyqtSlot(int)
+            def updateButtonChecked(self, button_id):
+                self.button(button_id).setChecked(True)
+        self._RF_hackrf_tx_button_group = variable_chooser_button_group()
+        self._RF_hackrf_tx_group_box.setLayout(self._RF_hackrf_tx_box)
+        for i, _label in enumerate(self._RF_hackrf_tx_labels):
+            radio_button = Qt.QRadioButton(_label)
+            self._RF_hackrf_tx_box.addWidget(radio_button)
+            self._RF_hackrf_tx_button_group.addButton(radio_button, i)
+        self._RF_hackrf_tx_callback = lambda i: Qt.QMetaObject.invokeMethod(self._RF_hackrf_tx_button_group, "updateButtonChecked", Qt.Q_ARG("int", self._RF_hackrf_tx_options.index(i)))
+        self._RF_hackrf_tx_callback(self.RF_hackrf_tx)
+        self._RF_hackrf_tx_button_group.buttonClicked[int].connect(
+            lambda i: self.set_RF_hackrf_tx(self._RF_hackrf_tx_options[i]))
+        self.top_grid_layout.addWidget(self._RF_hackrf_tx_group_box, 0, 4, 2, 1)
+        for r in range(0, 2):
+            self.top_grid_layout.setRowStretch(r, 1)
+        for c in range(4, 5):
+            self.top_grid_layout.setColumnStretch(c, 1)
+        self._IF_hackrf_tx_range = qtgui.Range(0, 47, 1, 0, 200)
+        self._IF_hackrf_tx_win = qtgui.RangeWidget(self._IF_hackrf_tx_range, self.set_IF_hackrf_tx, "Ganancia IF TX", "counter_slider", float, QtCore.Qt.Horizontal)
+        self.top_grid_layout.addWidget(self._IF_hackrf_tx_win, 1, 2, 1, 1)
+        for r in range(1, 2):
+            self.top_grid_layout.setRowStretch(r, 1)
+        for c in range(2, 3):
+            self.top_grid_layout.setColumnStretch(c, 1)
+        self.wavfile_source = blocks.wavfile_source(wav_path, True)
+        self.throttle_sdr_gui = blocks.throttle( gr.sizeof_gr_complex*1, samp_rate_sdr, True, 0 if "auto" == "auto" else max( int(float(0.1) * samp_rate_sdr) if "auto" == "time" else int(0.1), 1) )
+        self.throttle_fm_gui_1 = blocks.throttle( gr.sizeof_gr_complex*1, fm_rate, True, 0 if "auto" == "auto" else max( int(float(0.1) * fm_rate) if "auto" == "time" else int(0.1), 1) )
+        self.soapy_hackrf_sink = None
+        dev = 'driver=hackrf'
+        stream_args = ''
+        tune_args = ['']
+        settings = ['']
+
+        self.soapy_hackrf_sink = soapy.sink(dev, "fc32", 1, '',
+                                  stream_args, tune_args, settings)
+        self.soapy_hackrf_sink.set_sample_rate(0, samp_rate_sdr)
+        self.soapy_hackrf_sink.set_bandwidth(0, 1.75e6)
+        self.soapy_hackrf_sink.set_frequency(0, freq)
+        self.soapy_hackrf_sink.set_gain(0, 'AMP', RF_hackrf_tx)
+        self.soapy_hackrf_sink.set_gain(0, 'VGA', min(max(IF_hackrf_tx, 0.0), 47.0))
+        self.sdr_gui_freq_sink = qtgui.freq_sink_c(
+            1024, #size
             window.WIN_BLACKMAN_hARRIS, #wintype
-            0, #fc
+            freq_sdr, #fc
             samp_rate_sdr, #bw
-            "", #name
+            "Espectro de la señal transmitiéndose con HackRF", #name
             1,
             None # parent
         )
-        self.fm_gui_freq_sink.set_update_time(0.10)
-        self.fm_gui_freq_sink.set_y_axis((-140), 10)
-        self.fm_gui_freq_sink.set_y_label('Relative Gain', 'dB')
-        self.fm_gui_freq_sink.set_trigger_mode(qtgui.TRIG_MODE_FREE, 0.0, 0, "")
-        self.fm_gui_freq_sink.enable_autoscale(False)
-        self.fm_gui_freq_sink.enable_grid(True)
-        self.fm_gui_freq_sink.set_fft_average(1.0)
-        self.fm_gui_freq_sink.enable_axis_labels(True)
-        self.fm_gui_freq_sink.enable_control_panel(True)
-        self.fm_gui_freq_sink.set_fft_window_normalized(False)
+        self.sdr_gui_freq_sink.set_update_time(0.10)
+        self.sdr_gui_freq_sink.set_y_axis((-140), 10)
+        self.sdr_gui_freq_sink.set_y_label('Ganancia Relativa', 'dB')
+        self.sdr_gui_freq_sink.set_trigger_mode(qtgui.TRIG_MODE_FREE, 0.0, 0, "")
+        self.sdr_gui_freq_sink.enable_autoscale(False)
+        self.sdr_gui_freq_sink.enable_grid(True)
+        self.sdr_gui_freq_sink.set_fft_average(1.0)
+        self.sdr_gui_freq_sink.enable_axis_labels(True)
+        self.sdr_gui_freq_sink.enable_control_panel(True)
+        self.sdr_gui_freq_sink.set_fft_window_normalized(False)
 
 
 
-        labels = ['', '', '', '', '',
+        labels = ["Señal APT \nmodulada\nen FM", '', '', '', '',
             '', '', '', '', '']
         widths = [1, 1, 1, 1, 1,
             1, 1, 1, 1, 1]
@@ -151,29 +213,124 @@ class transmit_hackrf(gr.top_block, Qt.QWidget):
 
         for i in range(1):
             if len(labels[i]) == 0:
-                self.fm_gui_freq_sink.set_line_label(i, "Data {0}".format(i))
+                self.sdr_gui_freq_sink.set_line_label(i, "Data {0}".format(i))
             else:
-                self.fm_gui_freq_sink.set_line_label(i, labels[i])
-            self.fm_gui_freq_sink.set_line_width(i, widths[i])
-            self.fm_gui_freq_sink.set_line_color(i, colors[i])
-            self.fm_gui_freq_sink.set_line_alpha(i, alphas[i])
+                self.sdr_gui_freq_sink.set_line_label(i, labels[i])
+            self.sdr_gui_freq_sink.set_line_width(i, widths[i])
+            self.sdr_gui_freq_sink.set_line_color(i, colors[i])
+            self.sdr_gui_freq_sink.set_line_alpha(i, alphas[i])
 
-        self._fm_gui_freq_sink_win = sip.wrapinstance(self.fm_gui_freq_sink.qwidget(), Qt.QWidget)
-        self.top_layout.addWidget(self._fm_gui_freq_sink_win)
+        self._sdr_gui_freq_sink_win = sip.wrapinstance(self.sdr_gui_freq_sink.qwidget(), Qt.QWidget)
+        self.tab_widget_layout_2.addWidget(self._sdr_gui_freq_sink_win)
+        self.fm_rational_resampler = filter.rational_resampler_ccc(
+                interpolation=int(samp_rate_sdr),
+                decimation=int(fm_rate),
+                taps=[],
+                fractional_bw=0)
         self.control_volume = blocks.multiply_const_ff((volume/100))
         self.audio_sink = audio.sink(12000, '', True)
+        self.audio_rational_resampler = filter.rational_resampler_fff(
+                interpolation=12000,
+                decimation=audio_rate,
+                taps=[],
+                fractional_bw=0)
+        self.audio_gui_freq_sink_0 = qtgui.freq_sink_c(
+            1024, #size
+            window.WIN_BLACKMAN_hARRIS, #wintype
+            0, #fc
+            fm_rate, #bw
+            "Espectro de la señal APT modulada en FM", #name
+            1,
+            None # parent
+        )
+        self.audio_gui_freq_sink_0.set_update_time(0.10)
+        self.audio_gui_freq_sink_0.set_y_axis((-140), 10)
+        self.audio_gui_freq_sink_0.set_y_label('Ganancia Relativa', 'dB')
+        self.audio_gui_freq_sink_0.set_trigger_mode(qtgui.TRIG_MODE_FREE, 0.0, 0, "")
+        self.audio_gui_freq_sink_0.enable_autoscale(False)
+        self.audio_gui_freq_sink_0.enable_grid(True)
+        self.audio_gui_freq_sink_0.set_fft_average(1.0)
+        self.audio_gui_freq_sink_0.enable_axis_labels(True)
+        self.audio_gui_freq_sink_0.enable_control_panel(True)
+        self.audio_gui_freq_sink_0.set_fft_window_normalized(False)
+
+
+
+        labels = ["Señal APT\nmodulada\nen FM", '', '', '', '',
+            '', '', '', '', '']
+        widths = [1, 1, 1, 1, 1,
+            1, 1, 1, 1, 1]
+        colors = ["blue", "red", "green", "black", "cyan",
+            "magenta", "yellow", "dark red", "dark green", "dark blue"]
+        alphas = [1.0, 1.0, 1.0, 1.0, 1.0,
+            1.0, 1.0, 1.0, 1.0, 1.0]
+
+        for i in range(1):
+            if len(labels[i]) == 0:
+                self.audio_gui_freq_sink_0.set_line_label(i, "Data {0}".format(i))
+            else:
+                self.audio_gui_freq_sink_0.set_line_label(i, labels[i])
+            self.audio_gui_freq_sink_0.set_line_width(i, widths[i])
+            self.audio_gui_freq_sink_0.set_line_color(i, colors[i])
+            self.audio_gui_freq_sink_0.set_line_alpha(i, alphas[i])
+
+        self._audio_gui_freq_sink_0_win = sip.wrapinstance(self.audio_gui_freq_sink_0.qwidget(), Qt.QWidget)
+        self.tab_widget_layout_1.addWidget(self._audio_gui_freq_sink_0_win)
+        self.audio_gui_freq_sink = qtgui.freq_sink_f(
+            1024, #size
+            window.WIN_BLACKMAN_hARRIS, #wintype
+            0, #fc
+            12000, #bw
+            "Espectro de la señal Automatic Picture Transmission (APT)", #name
+            1,
+            None # parent
+        )
+        self.audio_gui_freq_sink.set_update_time(0.10)
+        self.audio_gui_freq_sink.set_y_axis((-140), 10)
+        self.audio_gui_freq_sink.set_y_label('Ganancia Relativa', 'dB')
+        self.audio_gui_freq_sink.set_trigger_mode(qtgui.TRIG_MODE_FREE, 0.0, 0, "")
+        self.audio_gui_freq_sink.enable_autoscale(False)
+        self.audio_gui_freq_sink.enable_grid(True)
+        self.audio_gui_freq_sink.set_fft_average(1.0)
+        self.audio_gui_freq_sink.enable_axis_labels(True)
+        self.audio_gui_freq_sink.enable_control_panel(True)
+        self.audio_gui_freq_sink.set_fft_window_normalized(False)
+
+
+        self.audio_gui_freq_sink.set_plot_pos_half(not False)
+
+        labels = ["APT\n(imagen\n en AM)", '', '', '', '',
+            '', '', '', '', '']
+        widths = [1, 1, 1, 1, 1,
+            1, 1, 1, 1, 1]
+        colors = ["blue", "red", "green", "black", "cyan",
+            "magenta", "yellow", "dark red", "dark green", "dark blue"]
+        alphas = [1.0, 1.0, 1.0, 1.0, 1.0,
+            1.0, 1.0, 1.0, 1.0, 1.0]
+
+        for i in range(1):
+            if len(labels[i]) == 0:
+                self.audio_gui_freq_sink.set_line_label(i, "Data {0}".format(i))
+            else:
+                self.audio_gui_freq_sink.set_line_label(i, labels[i])
+            self.audio_gui_freq_sink.set_line_width(i, widths[i])
+            self.audio_gui_freq_sink.set_line_color(i, colors[i])
+            self.audio_gui_freq_sink.set_line_alpha(i, alphas[i])
+
+        self._audio_gui_freq_sink_win = sip.wrapinstance(self.audio_gui_freq_sink.qwidget(), Qt.QWidget)
+        self.tab_widget_layout_0.addWidget(self._audio_gui_freq_sink_win)
         self.analog_nbfm_tx = analog.nbfm_tx(
         	audio_rate=12000,
         	quad_rate=int(fm_rate),
         	tau=(75e-6),
-        	max_dev=17e3,
+        	max_dev=max_deviation,
         	fh=(-1.0),
                 )
         self.analog_nbfm_rx = analog.nbfm_rx(
         	audio_rate=12000,
         	quad_rate=int(fm_rate),
         	tau=(75e-6),
-        	max_dev=17e3,
+        	max_dev=max_deviation,
           )
 
 
@@ -182,11 +339,15 @@ class transmit_hackrf(gr.top_block, Qt.QWidget):
         ##################################################
         self.connect((self.analog_nbfm_rx, 0), (self.audio_sink, 0))
         self.connect((self.analog_nbfm_tx, 0), (self.analog_nbfm_rx, 0))
-        self.connect((self.analog_nbfm_tx, 0), (self.rational_resampler, 0))
-        self.connect((self.control_volume, 0), (self.rational_resampler_0, 0))
-        self.connect((self.rational_resampler, 0), (self.throttle_fm_gui, 0))
-        self.connect((self.rational_resampler_0, 0), (self.analog_nbfm_tx, 0))
-        self.connect((self.throttle_fm_gui, 0), (self.fm_gui_freq_sink, 0))
+        self.connect((self.analog_nbfm_tx, 0), (self.fm_rational_resampler, 0))
+        self.connect((self.analog_nbfm_tx, 0), (self.soapy_hackrf_sink, 0))
+        self.connect((self.analog_nbfm_tx, 0), (self.throttle_fm_gui_1, 0))
+        self.connect((self.audio_rational_resampler, 0), (self.analog_nbfm_tx, 0))
+        self.connect((self.audio_rational_resampler, 0), (self.audio_gui_freq_sink, 0))
+        self.connect((self.control_volume, 0), (self.audio_rational_resampler, 0))
+        self.connect((self.fm_rational_resampler, 0), (self.throttle_sdr_gui, 0))
+        self.connect((self.throttle_fm_gui_1, 0), (self.audio_gui_freq_sink_0, 0))
+        self.connect((self.throttle_sdr_gui, 0), (self.sdr_gui_freq_sink, 0))
         self.connect((self.wavfile_source, 0), (self.control_volume, 0))
 
 
@@ -198,13 +359,22 @@ class transmit_hackrf(gr.top_block, Qt.QWidget):
 
         event.accept()
 
+    def get_freq_sdr(self):
+        return self.freq_sdr
+
+    def set_freq_sdr(self, freq_sdr):
+        self.freq_sdr = freq_sdr
+        self._freq_msgdigctl_win.setValue(self.freq_sdr)
+        self.sdr_gui_freq_sink.set_frequency_range(self.freq_sdr, self.samp_rate_sdr)
+
     def get_samp_rate_sdr(self):
         return self.samp_rate_sdr
 
     def set_samp_rate_sdr(self, samp_rate_sdr):
         self.samp_rate_sdr = samp_rate_sdr
-        self.fm_gui_freq_sink.set_frequency_range(0, self.samp_rate_sdr)
-        self.throttle_fm_gui.set_sample_rate(self.samp_rate_sdr)
+        self.sdr_gui_freq_sink.set_frequency_range(self.freq_sdr, self.samp_rate_sdr)
+        self.soapy_hackrf_sink.set_sample_rate(0, self.samp_rate_sdr)
+        self.throttle_sdr_gui.set_sample_rate(self.samp_rate_sdr)
 
     def get_wavfile(self):
         return self.wavfile
@@ -226,23 +396,28 @@ class transmit_hackrf(gr.top_block, Qt.QWidget):
         self.volume = volume
         self.control_volume.set_k((self.volume/100))
 
-    def get_gain_sdr_tx(self):
-        return self.gain_sdr_tx
+    def get_max_deviation(self):
+        return self.max_deviation
 
-    def set_gain_sdr_tx(self, gain_sdr_tx):
-        self.gain_sdr_tx = gain_sdr_tx
+    def set_max_deviation(self, max_deviation):
+        self.max_deviation = max_deviation
+        self.analog_nbfm_rx.set_max_deviation(self.max_deviation)
+        self.analog_nbfm_tx.set_max_deviation(self.max_deviation)
 
     def get_freq(self):
         return self.freq
 
     def set_freq(self, freq):
         self.freq = freq
+        self.soapy_hackrf_sink.set_frequency(0, self.freq)
 
     def get_fm_rate(self):
         return self.fm_rate
 
     def set_fm_rate(self, fm_rate):
         self.fm_rate = fm_rate
+        self.audio_gui_freq_sink_0.set_frequency_range(0, self.fm_rate)
+        self.throttle_fm_gui_1.set_sample_rate(self.fm_rate)
 
     def get_audio_rate(self):
         return self.audio_rate
@@ -250,15 +425,33 @@ class transmit_hackrf(gr.top_block, Qt.QWidget):
     def set_audio_rate(self, audio_rate):
         self.audio_rate = audio_rate
 
+    def get_RF_hackrf_tx(self):
+        return self.RF_hackrf_tx
+
+    def set_RF_hackrf_tx(self, RF_hackrf_tx):
+        self.RF_hackrf_tx = RF_hackrf_tx
+        self._RF_hackrf_tx_callback(self.RF_hackrf_tx)
+        self.soapy_hackrf_sink.set_gain(0, 'AMP', self.RF_hackrf_tx)
+
+    def get_IF_hackrf_tx(self):
+        return self.IF_hackrf_tx
+
+    def set_IF_hackrf_tx(self, IF_hackrf_tx):
+        self.IF_hackrf_tx = IF_hackrf_tx
+        self.soapy_hackrf_sink.set_gain(0, 'VGA', min(max(self.IF_hackrf_tx, 0.0), 47.0))
+
 
 
 def argument_parser():
     parser = ArgumentParser()
     parser.add_argument(
-        "-s", "--samp-rate-sdr", dest="samp_rate_sdr", type=eng_float, default=eng_notation.num_to_str(float(8e6)),
+        "--freq-sdr", dest="freq_sdr", type=eng_float, default=eng_notation.num_to_str(float(928e6)),
+        help="Set freq_rate_sdr [default=%(default)r]")
+    parser.add_argument(
+        "--samp-rate-sdr", dest="samp_rate_sdr", type=eng_float, default=eng_notation.num_to_str(float(8e6)),
         help="Set samp_rate_sdr [default=%(default)r]")
     parser.add_argument(
-        "-f", "--wavfile", dest="wavfile", type=str, default=detect_platform.wav_path,
+        "--wavfile", dest="wavfile", type=str, default=detect_platform.wav_path,
         help="Set /home/tcasaniv/APT-Tx_Files/apt_generated_audio.wav [default=%(default)r]")
     return parser
 
@@ -269,7 +462,7 @@ def main(top_block_cls=transmit_hackrf, options=None):
 
     qapp = Qt.QApplication(sys.argv)
 
-    tb = top_block_cls(samp_rate_sdr=options.samp_rate_sdr, wavfile=options.wavfile)
+    tb = top_block_cls(freq_sdr=options.freq_sdr, samp_rate_sdr=options.samp_rate_sdr, wavfile=options.wavfile)
 
     tb.start()
 
