@@ -304,8 +304,7 @@ class MainApp:
     def show_about_apt_dialog(self, e):
         self.show_alert_dialog(
             "Sobre APT (Automatic Picture Transmission)",
-            "APT es un sistema de transmisión de imágenes analógicas utilizado por algunos satélites meteorológicos,\n"
-            "principalmente los de la serie NOAA POES.\n\n"
+            "APT es un sistema de transmisión de imágenes analógicas utilizado por algunos satélites meteorológicos, principalmente los de la serie NOAA POES.\n\n"
             "Las imágenes se transmiten en la banda de 137 MHz a 138 MHz y pueden ser recibidas con equipamiento relativamente simple como un receptor FM analógico o un receptor SDR.\n\n"
             "Este programa genera la señal de audio APT para su posterior transmisión con un SDR."
         )
@@ -318,8 +317,8 @@ class MainApp:
                     ft.Row([ft.Image(src="icon.png", width=100, height=100, fit=ft.ImageFit.CONTAIN, border_radius=10),
                     ft.Column([ft.Text(f"Versión: {VERSION_APP}"),
                     ft.Text("Aplicación para generar señales de audio APT para transmisión FM con SDR."),
-                    ft.Text("Desarrollado con Flet y Python.")])]),
-                    ft.Text("\nIdea Original: Transmitir imágenes personalizadas con un SDR simulando ser el pase de un satélite NOAA.")
+                    ft.Text("Desarrollado con Flet y Python.")])],wrap=True),
+                    ft.Text("\nIdea Original: Transmitir imágenes personalizadas con un SDR simulando así el pase de un satélite NOAA.")
                 ], tight=True, spacing=5
             ),
             actions=[ft.TextButton("Cerrar", on_click=lambda _: self.close_dialog(about_app_dialog))],
@@ -655,23 +654,23 @@ class MainApp:
         file_picker_b = ft.FilePicker(on_result=lambda e: self.on_file_picked(e, "B"))
         self.page.overlay.extend([file_picker_a, file_picker_b])
 
-        tab1_content = ft.ListView( expand=True, spacing=20, padding=20,
+        tab1_content = ft.ListView( expand=True, spacing=15, padding=20,
             controls=[
                 ft.Text("1. Selección de Imágenes Fuente", size=20, weight=ft.FontWeight.BOLD),
                 ft.Row(
                     [
                         ft.Column([
                             ft.Text("Imagen A", weight=ft.FontWeight.BOLD), self.img_a_clickable,
-                            ft.Row([self.txt_url_a, self.btn_load_url_a], alignment=ft.MainAxisAlignment.CENTER, spacing=5),
+                            ft.Row([self.txt_url_a, self.btn_load_url_a], alignment=ft.MainAxisAlignment.CENTER, spacing=5,width=450,wrap=True),
                             ft.ElevatedButton("Archivo Local A", icon=ft.Icons.FOLDER_OPEN, on_click=lambda _: file_picker_a.pick_files(allow_multiple=False, allowed_extensions=["jpg", "jpeg", "png", "bmp"]), width=self.txt_url_a.width + self.btn_load_url_a.width + 5),
                         ], horizontal_alignment=ft.CrossAxisAlignment.CENTER, spacing=10),
-                        ft.VerticalDivider(width=30),
+                        # ft.VerticalDivider(width=30),
                         ft.Column([
                             ft.Text("Imagen B", weight=ft.FontWeight.BOLD), self.img_b_clickable,
-                            ft.Row([self.txt_url_b, self.btn_load_url_b], alignment=ft.MainAxisAlignment.CENTER, spacing=5),
+                            ft.Row([self.txt_url_b, self.btn_load_url_b], alignment=ft.MainAxisAlignment.CENTER, spacing=5,width=450,wrap=True),
                             ft.ElevatedButton("Archivo Local B", icon=ft.Icons.FOLDER_OPEN, on_click=lambda _: file_picker_b.pick_files(allow_multiple=False, allowed_extensions=["jpg", "jpeg", "png", "bmp"]), width=self.txt_url_b.width + self.btn_load_url_b.width + 5),
                         ], horizontal_alignment=ft.CrossAxisAlignment.CENTER, spacing=10),
-                    ], alignment=ft.MainAxisAlignment.SPACE_EVENLY, vertical_alignment=ft.CrossAxisAlignment.START
+                    ], alignment=ft.MainAxisAlignment.SPACE_AROUND, wrap=True,
                 ),
             ]
         )
@@ -702,8 +701,12 @@ class MainApp:
                 ft.Text("Previsualización Preprocesadas", size=18, weight=ft.FontWeight.BOLD, text_align=ft.TextAlign.CENTER),
                 ft.Row(
                     [
-                        ft.Column([ft.Text("Imagen A Preprocesada"), self.preprocessed_a_clickable], horizontal_alignment=ft.CrossAxisAlignment.CENTER),
-                        ft.Column([ft.Text("Imagen B Preprocesada"), self.preprocessed_b_clickable], horizontal_alignment=ft.CrossAxisAlignment.CENTER),
+                        ft.Column([
+                            ft.Text("Imagen A Preprocesada"), self.preprocessed_a_clickable
+                            ], horizontal_alignment=ft.CrossAxisAlignment.CENTER),
+                        ft.Column([
+                            ft.Text("Imagen B Preprocesada"), self.preprocessed_b_clickable
+                            ], horizontal_alignment=ft.CrossAxisAlignment.CENTER),
                     ], alignment=ft.MainAxisAlignment.SPACE_AROUND, wrap=True
                 ),
                 ft.Divider(height=10),
