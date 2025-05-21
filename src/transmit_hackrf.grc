@@ -490,7 +490,7 @@ blocks:
     alias: ''
     comment: ''
     hide: none
-    label: freq_rate_sdr
+    label: Frecuencia TX SDR
     short_id: ''
     type: eng_float
     value: 928e6
@@ -498,7 +498,7 @@ blocks:
     bus_sink: false
     bus_source: false
     bus_structure: null
-    coordinate: [1248, 144.0]
+    coordinate: [1184, 128.0]
     rotation: 0
     state: enabled
 - name: samp_rate_sdr
@@ -507,7 +507,7 @@ blocks:
     alias: ''
     comment: ''
     hide: none
-    label: samp_rate_sdr
+    label: Frecuencia de muestro TX SDR
     short_id: ''
     type: eng_float
     value: 8e6
@@ -515,7 +515,7 @@ blocks:
     bus_sink: false
     bus_source: false
     bus_structure: null
-    coordinate: [1248, 248.0]
+    coordinate: [1184, 240.0]
     rotation: 0
     state: enabled
 - name: sdr_gui_freq_sink
@@ -727,7 +727,7 @@ blocks:
     alias: ''
     comment: ''
     hide: none
-    label: wavfile
+    label: Ruta archivo WAV
     short_id: ''
     type: str
     value: detect_platform.wav_path
@@ -735,7 +735,7 @@ blocks:
     bus_sink: false
     bus_source: false
     bus_structure: null
-    coordinate: [1248, 32.0]
+    coordinate: [1184, 16.0]
     rotation: 0
     state: enabled
 - name: wavfile_source
