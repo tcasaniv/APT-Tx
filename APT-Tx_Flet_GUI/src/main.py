@@ -7,7 +7,7 @@ import shutil
 import requests # Para descargar imágenes desde URL
 from pathlib import Path # Para manejo de rutas más robusto
 import sys # Necesario para sys.executable y sys.frozen
-from utils import apt_encoder, modulate_APT_img_to_audio, preprocesar_img_to_APT as preproc_img
+from utils import apt_encoder, modulate_APT_img_to_audio, preprocesar_img_to_APT
 
 VERSION_APP="v0.1.0"
 
@@ -141,7 +141,7 @@ def preprocessing_img(page: ft.Page, image_name_suffix: str, status_bar_text_ref
     generated_file_path = str(Path(get_app_files_dir()) / output_filename)
 
     try:
-        preproc_img(source_image_path_val, generated_file_path,image_name_suffix)
+        preprocesar_img_to_APT(source_image_path_val, generated_file_path,image_name_suffix)
         preprocessed_image_display_ref.src = generated_file_path
         preprocessed_image_display_ref.update()
         status_bar_text_ref.value = f"Imagen {image_name_suffix} preprocesada. Guardada como: {output_filename}"

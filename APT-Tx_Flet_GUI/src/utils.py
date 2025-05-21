@@ -30,6 +30,8 @@ def preprocesar_img_to_APT(ruta_entrada_img:str, ruta_salida_img: str,image_name
     :param ruta_entrada_img: Ruta de la imagen a preparar para transmitir por APT.
     :return ruta de la imagen preprocesada.
     """
+    print("|-------- Preprocesar Imagen --------|")
+    print("Abriendo imagen para preprocesar...")
     # Abrir la imagen
     try:
         imagen = Img.open(ruta_entrada_img)
@@ -47,7 +49,6 @@ def preprocesar_img_to_APT(ruta_entrada_img:str, ruta_salida_img: str,image_name
     # img_reescalada.save(ruta_salida_img_reescalada)
     imagen_gris.save(ruta_salida_img)
     print(f"Imagen {image_name_suffix} preprocesada para formato APT guardada en:\n{ruta_salida_img}\n")
-    # return ruta_salida_img
 
 
     # Codificar imagen en APT
