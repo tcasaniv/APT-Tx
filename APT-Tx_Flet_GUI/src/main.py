@@ -236,7 +236,7 @@ def sdr_transmission(page: ft.Page, status_label, wav_to_transmit_path, selected
     page.update()
     time.sleep(0.5)
 
-    # Construir comando
+    # Construir comando para script de GNU Radio
     interprete_python="/usr/bin/python3"
     if platform.system() == 'Windows':
         interprete_python="/usr/bin/python3"
@@ -247,9 +247,15 @@ def sdr_transmission(page: ft.Page, status_label, wav_to_transmit_path, selected
     elif platform.system() == 'Linux':
         interprete_python="/usr/bin/python3"
     else:
-        status_label.value = f"Error: Plataforma no soportada'."
+        status_label.value = f"Error: Plataforma no soportada."
     
-    command = [interprete_python,"-u", script_full_path, "-f", wav_to_transmit_path]
+    command = [
+        interprete_python,
+        "-u", script_full_path,
+        "--freq-sdr",sdr_options_controls["FREQ_SDR"],
+        "--samp-rate-sdr", sdr_options_controls["SAMP_RATE_SDR"],
+        "--wavfile", wav_to_transmit_path
+        ]
 
     status_label.value = f"Ejecutando: {' '.join(command)}"
     page.update()
@@ -259,9 +265,7 @@ def sdr_transmission(page: ft.Page, status_label, wav_to_transmit_path, selected
         status_label.value += "\nScript de transmisión GNU Radio en ejecución..."
         page.update()
         subprocess.run(command)
-
-        # Para simulación
-        # time.sleep(1)
+        print(f"Comando ejecutado:\n{command}")
 
         status_label.value = f"Script '{selected_script_filename}' ejecutado. Ver consola para la salida."
 
@@ -284,14 +288,13 @@ class MainApp:
 
     def show_alert_dialog(self, title_text, content_text):
         dialog = ft.AlertDialog(
-            modal=True,
             title=ft.Text(title_text),
             content=ft.Text(content_text),
             actions=[ft.TextButton("Cerrar", on_click=lambda _: self.close_dialog(dialog))],
             actions_alignment=ft.MainAxisAlignment.END,
         )
         self.page.dialog = dialog
-        dialog.open = True
+        self.page.open(dialog)
         self.page.update()
 
     def show_about_apt_dialog(self, e):
@@ -299,27 +302,27 @@ class MainApp:
             "Sobre APT (Automatic Picture Transmission)",
             "APT es un sistema de transmisión de imágenes analógicas utilizado por algunos satélites meteorológicos,\n"
             "principalmente los de la serie NOAA POES.\n\n"
-            "Las imágenes se transmiten en la banda de 137 MHz y pueden ser recibidas con equipamiento SDR relativamente simple.\n"
-            "Este programa simula la generación de la señal de audio APT para su posterior transmisión."
+            "Las imágenes se transmiten en la banda de 137 MHz a 138 MHz y pueden ser recibidas con equipamiento relativamente simple como un receptor FM analógico o un receptor SDR.\n\n"
+            "Este programa genera la señal de audio APT para su posterior transmisión con un SDR."
         )
 
     def show_about_app_dialog(self, e):
         about_app_dialog = ft.AlertDialog(
-            modal=True,
             title=ft.Text(f"Acerca de {APP_NAME}"),
             content=ft.Column(
                 [
-                    ft.Text(f"Versión: {VERSION_APP}"),
+                    ft.Row([ft.Image(src="icon.png", width=100, height=100, fit=ft.ImageFit.CONTAIN, border_radius=10),
+                    ft.Column([ft.Text(f"Versión: {VERSION_APP}"),
                     ft.Text("Aplicación para generar señales de audio APT para transmisión FM con SDR."),
-                    ft.Text("Desarrollado con Flet y Python."),
-                    ft.Text("Idea Original: Transmitir imágenes personalizadas vía satélite (simulado).")
+                    ft.Text("Desarrollado con Flet y Python.")])]),
+                    ft.Text("\nIdea Original: Transmitir imágenes personalizadas con un SDR simulando ser el pase de un satélite NOAA.")
                 ], tight=True, spacing=5
             ),
             actions=[ft.TextButton("Cerrar", on_click=lambda _: self.close_dialog(about_app_dialog))],
             actions_alignment=ft.MainAxisAlignment.END,
         )
         self.page.dialog = about_app_dialog
-        about_app_dialog.open = True
+        self.page.open(about_app_dialog)
         self.page.update()
         
     def close_dialog(self, dialog_instance):
@@ -557,12 +560,10 @@ class MainApp:
         
         selected_script_filename = scripts_config[selected_script_display_name]
         
-        # Pasar referencias a los checkboxes para que sdr_transmission pueda leer sus valores
+        # Pasar referencias a los inputs para que sdr_transmission pueda leer sus valores
         sdr_controls = {
-            "freq": self.cb_freq,
-            "gain": self.cb_gain,
-            # "sample_rate": self.cb_sample_rate, # Deshabilitado en UI
-            "preemphasis": self.cb_preemphasis,
+            "FREQ_SDR": f"{self.slider_freq_tx_sdr.value}M",
+            "SAMP_RATE_SDR": f"{self.slider_samp_rate_sdr.value}M"
         }
 
         sdr_transmission(self.page, self.status_bar_text, generated_wav_path, selected_script_filename, sdr_controls)
@@ -723,19 +724,38 @@ class MainApp:
             width=400,
             on_change=lambda e: self.update_action_buttons_state()
         )
-        self.cb_freq = ft.Checkbox(label="Frecuencia: 137.5 MHz (NOAA 15/18) [Ejemplo]", value=True) # Etiqueta más clara
-        self.cb_gain = ft.Checkbox(label="Ganancia: Automática [Ejemplo]", value=True)
-        # self.cb_sample_rate = ft.Checkbox(label="Tasa de Muestreo: Ajustar en GRC", value=False, disabled=True)
-        self.cb_preemphasis = ft.Checkbox(label="Preénfasis activado (Recomendado) [Ejemplo]", value=True)
+
+        def slider_input_freq_tx_sdr_changed(e):
+            self.slider_freq_tx_sdr.value=round(self.slider_freq_tx_sdr.value,1)
+            self.text_value_freq_tx_sdr.value = f"{self.slider_freq_tx_sdr.value} MHz"
+            self.page.update()
+        
+        def slider_samp_rate_sdr_changed(e):
+            self.slider_samp_rate_sdr.value=round(self.slider_samp_rate_sdr.value,1)
+            self.text_value_samp_rate_sdr.value = f"{self.slider_samp_rate_sdr.value} MHz"
+            self.page.update()
+
+        self.text_freq_tx_sdr=ft.Text("Frecuencia de transmisión:")
+        self.slider_freq_tx_sdr = ft.Slider(value=928,min=88,max=3000,label="{value} MHz",on_change=slider_input_freq_tx_sdr_changed,divisions=(3000-88))
+        self.text_value_freq_tx_sdr=ft.Text(f"{self.slider_freq_tx_sdr.value} MHz")
+        
+        self.text_samp_rate_sdr=ft.Text("Frecuencia de muestreo SDR (sample rate):")
+        self.slider_samp_rate_sdr = ft.Slider(value=8,min=0.2,max=10,label="{value} MHz",
+        on_change=slider_samp_rate_sdr_changed,divisions=98)
+        self.text_value_samp_rate_sdr=ft.Text(f"{self.slider_samp_rate_sdr.value} MHz")
+        
         self.btn_transmit = ft.ElevatedButton("Transmitir con SDR", icon=ft.Icons.SEND, on_click=self.do_transmit_sdr, disabled=True)
 
         tab3_content = ft.ListView( expand=True, spacing=15, padding=20,
             controls=[
                 ft.Text("3. Opciones y Transmisión SDR", size=20, weight=ft.FontWeight.BOLD),
                 self.sdr_script_dropdown,
-                ft.Text("Parámetros de ejemplo para el script (ajustar según script real):", weight=ft.FontWeight.W_400),
-                self.cb_freq, self.cb_gain, self.cb_preemphasis, # self.cb_sample_rate,
-                ft.Text("Nota: Los parámetros exactos y cómo se pasan dependen del script de GNU Radio seleccionado.", italic=True, size=12),
+                ft.Text("Parámetros de transmisión para el script:", weight=ft.FontWeight.W_400),
+                ft.Row([self.text_freq_tx_sdr,self.text_value_freq_tx_sdr]),
+                self.slider_freq_tx_sdr,
+                ft.Row([self.text_samp_rate_sdr,self.text_value_samp_rate_sdr]),
+                self.slider_samp_rate_sdr,
+                ft.Text("Nota: Ajustar parámetros según el SDR a utilizar", italic=True, size=12),
                 ft.Divider(height=20),
                 ft.Container(content=self.btn_transmit, alignment=ft.alignment.center),
             ]
