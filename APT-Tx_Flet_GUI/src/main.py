@@ -9,7 +9,7 @@ from pathlib import Path # Para manejo de rutas más robusto
 import sys # Necesario para sys.executable y sys.frozen
 from utils import apt_encoder, modulate_APT_img_to_audio, preprocesar_img_to_APT
 
-VERSION_APP="v0.1.0"
+VERSION_APP="v1.0.0"
 
 # --- Constantes ---
 APP_NAME = "APT-Tx"
@@ -237,7 +237,8 @@ def sdr_transmission(page: ft.Page, status_label, wav_to_transmit_path, selected
     # Construir comando para script de GNU Radio
     interprete_python="/usr/bin/python3"
     if platform.system() == 'Windows':
-        interprete_python="/usr/bin/python3"
+        # interprete_python="~\\AppData\\Local\\Programs\\Python\\Python313\\python.exe"
+        interprete_python="py.exe"
     elif platform.system() == 'Darwin':  # macOS
         # interprete_python="/opt/homebrew/opt/python@3.13/bin/python3"
         # interprete_python="/opt/homebrew/Cellar/gnuradio/3.10.12.0_1/libexec/venv/bin/python"

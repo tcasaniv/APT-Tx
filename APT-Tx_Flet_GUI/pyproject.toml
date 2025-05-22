@@ -1,6 +1,6 @@
 [project]
-name = "apt-tx-flet-gui"
-version = "0.1.0"
+name = "APT-Tx"
+version = "1.0.0"
 description = "Transmite tus imágenes en formato APT como si se tratara de un satélite NOAA"
 readme = "README.md"
 requires-python = ">=3.9"
@@ -8,7 +8,12 @@ authors = [
     { name = "Terry Joel Casani Valencia", email = "tcasaniv@gmail.com" }
 ]
 dependencies = [
-  "flet==0.28.2"
+  "flet==0.28.2",
+  "numpy",
+  "requests",
+  "pillow",
+  "scipy",
+  "pathlib"
 ]
 
 [tool.flet]
@@ -18,7 +23,7 @@ org = "com.tcasaniv"
 
 # project display name that is used as an app title on Android and iOS home screens,
 # shown in window titles and about app dialogs on desktop.
-product = "apt-tx-flet-gui"
+product = "APT-Tx"
 
 # company name to display in about app dialogs
 company = "tcasaniv"
