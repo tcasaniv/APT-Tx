@@ -1,6 +1,5 @@
 flet[all]
 numpy
-matplotlib
 requests
 pillow
 scipy
