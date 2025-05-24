@@ -1,6 +1,5 @@
 flet[all]
-numpy
-requests
-pillow
-scipy
-pathlib
+numpy==2.2.6
+requests==2.32.3
+pillow==11.2.1
+scipy==1.15.3

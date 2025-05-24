@@ -8,12 +8,11 @@ authors = [
     { name = "Terry Joel Casani Valencia", email = "tcasaniv@gmail.com" }
 ]
 dependencies = [
-  "flet>=0.28.2",
-  "numpy",
-  "requests",
-  "pillow",
-  "scipy",
-  "pathlib"
+  "flet==0.28.3",
+  "numpy==2.2.6",
+  "requests==2.32.3",
+  "pillow==11.2.1",
+  "scipy==1.15.3"
 ]
 
 [tool.flet]
@@ -31,9 +30,9 @@ company = "tcasaniv"
 # copyright text to display in about app dialogs
 copyright = "Copyright (C) 2025 by tcasaniv"
 
-compile.app = true # --compile-app
-compile.packages = true # --compile-packages
-compile.cleanup = true # --cleanup-on-compile
+# compile.app = true # --compile-app
+# compile.packages = true # --compile-packages
+# compile.cleanup = true # --cleanup-on-compile
 
 [tool.flet.app]
 path = "src"
@@ -47,4 +46,4 @@ dev-dependencies = [
 package-mode = false
 
 [tool.poetry.group.dev.dependencies]
-flet = {extras = ["all"], version = "0.28.2"}
+flet = {extras = ["all"], version = "0.28.3"}
