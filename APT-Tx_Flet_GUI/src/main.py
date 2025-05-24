@@ -5,7 +5,6 @@ import platform
 import subprocess
 import shutil
 import requests # Para descargar imágenes desde URL
-from pathlib import Path # Para manejo de rutas más robusto
 import sys # Necesario para sys.executable y sys.frozen
 from utils import apt_encoder, modulate_APT_img_to_audio, preprocesar_img_to_APT
 
@@ -52,32 +51,29 @@ scripts_config = {
 def get_app_base_dir():
     """Obtiene la ruta base de la aplicación (donde está el script principal o el ejecutable)."""
     if getattr(sys, 'frozen', False): # Si está empaquetado por PyInstaller
-        return Path(sys.executable).parent
-    return Path(__file__).parent
+        return os.path.dirname(sys.executable)
+    return os.path.dirname(os.path.abspath(__file__))
 
 def get_app_files_dir():
     """Obtiene la ruta a la carpeta de archivos de la aplicación y la crea si no existe."""
     if platform.system() == "Windows":
-        base_path = Path(os.environ['USERPROFILE']) / 'Documents'
+        base_path = os.path.join(os.environ['USERPROFILE'], 'Documents')
     else:
-        base_path = Path.home()
+        base_path = os.path.expanduser("~")
     
-    app_dir = base_path / APP_FILES_DIR_NAME
-    app_dir.mkdir(parents=True, exist_ok=True)
-    return str(app_dir)
+    app_dir = os.path.join(base_path, APP_FILES_DIR_NAME)
+    os.makedirs(app_dir, exist_ok=True)
+    return app_dir
 
 def get_scripts_dir():
     """Obtiene la ruta a la carpeta de scripts de GNU Radio y la crea si no existe."""
-    # Por defecto, busca la carpeta 'scripts' junto al ejecutable o script principal.
-    # Se puede cambiar esto para que use get_app_files_dir().
-    scripts_dir = get_app_base_dir() / SCRIPTS_DIR_NAME
-    scripts_dir.mkdir(parents=True, exist_ok=True)
-    return str(scripts_dir)
-    
+    scripts_dir = os.path.join(get_app_base_dir(), SCRIPTS_DIR_NAME)
+    os.makedirs(scripts_dir, exist_ok=True)
+    return scripts_dir
 
 def open_file_with_default_program(filepath):
     try:
-        if not filepath or not Path(filepath).exists():
+        if not filepath or not os.path.exists(filepath):
             print(f"No se puede abrir: '{filepath}'. No es un archivo válido o no existe.")
             return False
         
@@ -129,7 +125,7 @@ def reset_downstream_processing(page: ft.Page, from_step: str):
 
 def preprocessing_img(page: ft.Page, image_name_suffix: str, status_bar_text_ref, 
                       preprocessed_image_display_ref, source_image_path_val):
-    if not source_image_path_val or not Path(source_image_path_val).exists():
+    if not source_image_path_val or not os.path.exists(source_image_path_val):
         status_bar_text_ref.value = f"Error: No hay imagen fuente local para preprocesar ({image_name_suffix})."
         page.update()
         return None
@@ -138,10 +134,10 @@ def preprocessing_img(page: ft.Page, image_name_suffix: str, status_bar_text_ref
     page.update()
 
     output_filename = f"preprocessed_img_{image_name_suffix}_{int(time.time())}.png"
-    generated_file_path = str(Path(get_app_files_dir()) / output_filename)
+    generated_file_path = os.path.join(get_app_files_dir(), output_filename)
 
     try:
-        preprocesar_img_to_APT(source_image_path_val, generated_file_path,image_name_suffix)
+        preprocesar_img_to_APT(source_image_path_val, generated_file_path, image_name_suffix)
         preprocessed_image_display_ref.src = generated_file_path
         preprocessed_image_display_ref.update()
         status_bar_text_ref.value = f"Imagen {image_name_suffix} preprocesada. Guardada como: {output_filename}"
@@ -158,8 +154,8 @@ def preprocessing_img(page: ft.Page, image_name_suffix: str, status_bar_text_ref
 def apt_encoding_img(page: ft.Page, status_label, apt_image_display, 
                      preproc_a_path, preproc_b_path):
     global generated_apt_image_path
-    if not (preproc_a_path and Path(preproc_a_path).exists()) or \
-       not (preproc_b_path and Path(preproc_b_path).exists()):
+    if not (preproc_a_path and os.path.exists(preproc_a_path)) or \
+       not (preproc_b_path and os.path.exists(preproc_b_path)):
         status_label.value = "Error: Se necesitan ambas imágenes preprocesadas (archivos locales) para codificar a APT."
         page.update()
         return None
@@ -169,7 +165,7 @@ def apt_encoding_img(page: ft.Page, status_label, apt_image_display,
     time.sleep(2)
 
     output_filename = f"apt_encoded_image_{int(time.time())}.png"
-    generated_file_path = str(Path(get_app_files_dir()) / output_filename)
+    generated_file_path = os.path.join(get_app_files_dir(), output_filename)
     
     try:
         apt_encoder(preproc_a_path, preproc_b_path, generated_file_path)
@@ -189,7 +185,7 @@ def apt_encoding_img(page: ft.Page, status_label, apt_image_display,
     
 def audio_apt_generation(page: ft.Page, status_label, audio_status_text, apt_img_path_val):
     global generated_wav_path
-    if not apt_img_path_val or not Path(apt_img_path_val).exists():
+    if not apt_img_path_val or not os.path.exists(apt_img_path_val):
         status_label.value = "Error: Se necesita una imagen APT (archivo local) para generar el audio."
         page.update()
         generated_wav_path = None
@@ -199,7 +195,7 @@ def audio_apt_generation(page: ft.Page, status_label, audio_status_text, apt_img
     page.update()
 
     output_filename = f"apt_generated_audio_{int(time.time())}.wav"
-    generated_file_path = str(Path(get_app_files_dir()) / output_filename)
+    generated_file_path = os.path.join(get_app_files_dir(), output_filename)
 
     try:
         duration = modulate_APT_img_to_audio(apt_img_path_val, generated_file_path)
@@ -219,13 +215,13 @@ def audio_apt_generation(page: ft.Page, status_label, audio_status_text, apt_img
 
 
 def sdr_transmission(page: ft.Page, status_label, wav_to_transmit_path, selected_script_filename, sdr_options_controls):
-    if not wav_to_transmit_path or not Path(wav_to_transmit_path).exists():
+    if not wav_to_transmit_path or not os.path.exists(wav_to_transmit_path):
         status_label.value = "Error: No hay archivo WAV para transmitir o el archivo no existe."
         page.update()
         return
 
-    script_full_path = str(Path(get_scripts_dir()) / selected_script_filename)
-    if not Path(script_full_path).exists():
+    script_full_path = os.path.join(get_scripts_dir(), selected_script_filename)
+    if not os.path.exists(script_full_path):
         status_label.value = f"Error: El script GNU Radio '{selected_script_filename}' no se encuentra en '{get_scripts_dir()}'."
         page.update()
         return
@@ -255,6 +251,8 @@ def sdr_transmission(page: ft.Page, status_label, wav_to_transmit_path, selected
         "--samp-rate-sdr", sdr_options_controls["SAMP_RATE_SDR"],
         "--wavfile", wav_to_transmit_path
         ]
+    
+    print(f"Ejecutando: {' '.join(command)}")
 
     status_label.value = f"Ejecutando: {' '.join(command)}"
     page.update()
@@ -386,7 +384,7 @@ class MainApp:
                     elif 'bmp' in content_type: ext = ".bmp"
                 
                 filename = f"downloaded_img_{img_tag.lower()}_{int(time.time())}{ext}"
-                downloaded_file_path = str(Path(get_app_files_dir()) / filename)
+                downloaded_file_path = os.join(get_app_files_dir(),filename)
 
                 with open(downloaded_file_path, 'wb') as f:
                     shutil.copyfileobj(response.raw, f)
@@ -428,7 +426,7 @@ class MainApp:
         if e.files and len(e.files) > 0:
             path_to_set = e.files[0].path
             current_img_display.src = path_to_set
-            self.status_bar_text.value = f"Imagen {img_tag} seleccionada: {Path(path_to_set).name}"
+            self.status_bar_text.value = f"Imagen {img_tag} seleccionada: {os.path.basename(path_to_set)}"
             txt_url_ref.value = "" 
             txt_url_ref.error_text = None
         else:
@@ -519,24 +517,24 @@ class MainApp:
         self.page.update()
 
     def play_audio_apt_generated(self, e):
-        if generated_wav_path and Path(generated_wav_path).exists():
+        if generated_wav_path and os.path.exists(generated_wav_path):
             if open_file_with_default_program(generated_wav_path):
-                self.status_bar_text.value = f"Intentando reproducir: {Path(generated_wav_path).name}"
+                self.status_bar_text.value = f"Intentando reproducir: {os.path.basename(generated_wav_path)}"
             else:
-                self.status_bar_text.value = f"Error al intentar abrir: {Path(generated_wav_path).name}. Revise la consola."
+                self.status_bar_text.value = f"Error al intentar abrir: {os.path.basename(generated_wav_path)}. Revise la consola."
         else:
             self.status_bar_text.value = "No hay archivo de audio generado o la ruta no es válida."
         self.page.update()
     
     def open_image_in_viewer(self, e, image_control: ft.Image):
         src_path = image_control.src
-        if src_path and not src_path.startswith("http") and Path(src_path).exists() and Path(src_path).is_file():
+        if src_path and not src_path.startswith("http") and os.path.exists(src_path) and os.path.isfile(src_path):
             if open_file_with_default_program(src_path):
-                self.status_bar_text.value = f"Abriendo imagen: {Path(src_path).name}"
+                self.status_bar_text.value = f"Abriendo imagen: {os.path.basename(src_path)}"
             else:
-                self.status_bar_text.value = f"No se pudo abrir la imagen: {Path(src_path).name}. Revise la consola."
+                self.status_bar_text.value = f"No se pudo abrir la imagen: {os.path.basename(src_path)}. Revise la consola."
         elif src_path and src_path.startswith("http"):
-             self.status_bar_text.value = "No se puede abrir una URL directamente. Descárguela primero."
+            self.status_bar_text.value = "No se puede abrir una URL directamente. Descárguela primero."
         else:
             self.status_bar_text.value = "No hay imagen local para mostrar o es un placeholder."
         self.page.update()
@@ -570,23 +568,23 @@ class MainApp:
 
     def update_action_buttons_state(self):
         # Habilitar Preprocesar si ambas imágenes fuente existen como archivos locales
-        can_preprocess = (image_a_source_path and Path(image_a_source_path).exists()) and \
-                         (image_b_source_path and Path(image_b_source_path).exists())
+        can_preprocess = (image_a_source_path and os.path.exists(image_a_source_path)) and \
+                         (image_b_source_path and os.path.exists(image_b_source_path))
         self.btn_preprocess.disabled = not can_preprocess
 
         # Habilitar Codificar a APT si ambas imágenes preprocesadas existen como archivos locales
-        can_encode_apt = (preprocessed_a_path_generated and Path(preprocessed_a_path_generated).exists()) and \
-                         (preprocessed_b_path_generated and Path(preprocessed_b_path_generated).exists())
+        can_encode_apt = (preprocessed_a_path_generated and os.path.exists(preprocessed_a_path_generated)) and \
+                         (preprocessed_b_path_generated and os.path.exists(preprocessed_b_path_generated))
         self.btn_encode_apt.disabled = not can_encode_apt
 
         # Habilitar Generar Audio si la imagen APT ha sido generada y existe como archivo local
-        can_generate_audio = generated_apt_image_path and Path(generated_apt_image_path).exists()
+        can_generate_audio = generated_apt_image_path and os.path.exists(generated_apt_image_path)
         self.btn_generate_audio.disabled = not can_generate_audio
 
         # Habilitar Reproducir Audio si el WAV ha sido generado y existe como archivo local
-        can_play_audio = generated_wav_path and Path(generated_wav_path).exists()
+        can_play_audio = generated_wav_path and os.path.exists(generated_wav_path)
         self.btn_play_audio.disabled = not can_play_audio
-            
+
         # Habilitar Transmitir si el WAV ha sido generado y existe, y hay un script seleccionado
         can_transmit = can_play_audio and (hasattr(self, 'sdr_script_dropdown') and self.sdr_script_dropdown.value is not None)
         self.btn_transmit.disabled = not can_transmit
