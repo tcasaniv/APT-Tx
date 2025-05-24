@@ -234,7 +234,7 @@ def sdr_transmission(page: ft.Page, status_label, wav_to_transmit_path, selected
     interprete_python="/usr/bin/python3"
     if platform.system() == 'Windows':
         # interprete_python="~\\AppData\\Local\\Programs\\Python\\Python313\\python.exe"
-        interprete_python="py.exe"
+        interprete_python="C:\\ProgramData\\radioconda\\python.exe"
     elif platform.system() == 'Darwin':  # macOS
         # interprete_python="/opt/homebrew/opt/python@3.13/bin/python3"
         # interprete_python="/opt/homebrew/Cellar/gnuradio/3.10.12.0_1/libexec/venv/bin/python"
@@ -384,7 +384,7 @@ class MainApp:
                     elif 'bmp' in content_type: ext = ".bmp"
                 
                 filename = f"downloaded_img_{img_tag.lower()}_{int(time.time())}{ext}"
-                downloaded_file_path = os.join(get_app_files_dir(),filename)
+                downloaded_file_path = os.path.join(get_app_files_dir(),filename)
 
                 with open(downloaded_file_path, 'wb') as f:
                     shutil.copyfileobj(response.raw, f)
