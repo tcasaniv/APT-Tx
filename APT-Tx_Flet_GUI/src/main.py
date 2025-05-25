@@ -42,7 +42,7 @@ scripts_config = {
     "HackRF (Simulación)": "simulate_hackrf.py",
     "HackRF (Transmisión Real en silencio)": "transmit_hackrf_muted.py",
     "HackRF (Transmisión Real)": "transmit_hackrf.py",
-    "USRP (Simulación)": "transmit_usrp.py",
+    "USRP (Simulación)": "transmit_usrp.py", # Asumiendo que es el mismo para los 3 casos de USRP
     "USRP (Transmisión Real en silencio)": "transmit_usrp.py",
     "USRP (Transmisión Real)": "transmit_usrp.py",
 }
@@ -91,9 +91,6 @@ def open_file_with_default_program(filepath):
         return False
 
 ## --- Funciones de Lógica --
-# (preprocessing_img, apt_encoding_img, audio_apt_generation
-#  asumen que image_X_source_path es local tras la descarga)
-
 
 def reset_downstream_processing(page: ft.Page, from_step: str):
     """Resetea los paths y UI para los pasos posteriores al indicado."""
@@ -107,21 +104,12 @@ def reset_downstream_processing(page: ft.Page, from_step: str):
 
     if from_step == "source_a_changed" or from_step == "source_all_changed":
         preprocessed_a_path_generated = None
-        # page.preprocessed_a_display.src = PLACEHOLDER_PREPROCESSED_A_PENDING (necesita referencia al control)
     if from_step == "source_b_changed" or from_step == "source_all_changed":
         preprocessed_b_path_generated = None
-        # page.preprocessed_b_display.src = PLACEHOLDER_PREPROCESSED_B_PENDING
     
     if from_step in ["source_a_changed", "source_b_changed", "source_all_changed", "preprocess_changed"]:
         generated_apt_image_path = None
         generated_wav_path = None
-        # page.apt_image_display.src = PLACEHOLDER_APT_PENDING
-        # page.audio_status_text.value = "Audio APT: Aún no generado."
-        # page.btn_play_audio.disabled = True
-
-    # Actualizar botones
-    # page.update_action_buttons_state() (necesita referencia a la función o page)
-    # Esta función se llamará desde el main_page_instance.update_action_buttons_state()
 
 def preprocessing_img(page: ft.Page, image_name_suffix: str, status_bar_text_ref, 
                       preprocessed_image_display_ref, source_image_path_val):
@@ -213,24 +201,27 @@ def audio_apt_generation(page: ft.Page, status_label, audio_status_text, apt_img
         generated_wav_path = None
         return None
 
+def build_sdr_command(wav_to_transmit_path, selected_script_filename, sdr_options_controls, scripts_base_dir):
+    """
+    Construye el comando para ejecutar el script GNU Radio y una cadena para mostrar.
 
-def sdr_transmission(page: ft.Page, status_label, wav_to_transmit_path, selected_script_filename, sdr_options_controls,command_label):
-    if not wav_to_transmit_path or not os.path.exists(wav_to_transmit_path):
-        status_label.value = "Error: No hay archivo WAV para transmitir o el archivo no existe."
-        page.update()
-        return
+    Args:
+        wav_to_transmit_path (str|None): Ruta al archivo WAV a transmitir.
+        selected_script_filename (str): Nombre del archivo del script GNU Radio.
+        sdr_options_controls (dict): Diccionario con las opciones del SDR.
+        scripts_base_dir (str): Ruta a la carpeta de scripts.
 
-    script_full_path = os.path.join(get_scripts_dir(), selected_script_filename)
+    Returns:
+        tuple: (list_of_command_parts, string_representation_of_command)
+               Retorna (None, "Error/Placeholder message") si hay un problema.
+    """
+    if not selected_script_filename:
+        return None, "Error: No se ha seleccionado un script GNU Radio."
+
+    script_full_path = os.path.join(scripts_base_dir, selected_script_filename)
     if not os.path.exists(script_full_path):
-        status_label.value = f"Error: El script GNU Radio '{selected_script_filename}' no se encuentra en '{get_scripts_dir()}'."
-        page.update()
-        return
+        return None, f"Error: El script '{selected_script_filename}' no se encuentra en '{scripts_base_dir}'."
 
-    status_label.value = f"Preparando transmisión SDR con script: {selected_script_filename}"
-    page.update()
-    time.sleep(0.5)
-
-    # Construir comando para script de GNU Radio
     interprete_python="/usr/bin/python3"
     if platform.system() == 'Windows':
         # interprete_python="~\\AppData\\Local\\Programs\\Python\\Python313\\python.exe"
@@ -242,42 +233,66 @@ def sdr_transmission(page: ft.Page, status_label, wav_to_transmit_path, selected
     elif platform.system() == 'Linux':
         interprete_python="/usr/bin/python3"
     else:
-        status_label.value = f"Error: Plataforma no soportada."
-    
-    command = [
+        print("Error: Plataforma no soportada. Usando Python por defecto.")
+
+    command_list = [
         interprete_python,
         "-u", script_full_path,
-        "--freq-sdr",sdr_options_controls["FREQ_SDR"],
-        "--samp-rate-sdr", sdr_options_controls["SAMP_RATE_SDR"]
-        ]
+        "--freq-sdr", str(sdr_options_controls["FREQ_SDR"]),
+        "--samp-rate-sdr", str(sdr_options_controls["SAMP_RATE_SDR"])
+    ]
 
     if wav_to_transmit_path and os.path.exists(wav_to_transmit_path):
-        command.extend(["--wavfile", wav_to_transmit_path])
-    command_label.value = f"Comando a ejecutar:\n{' '.join(command)}"
-    page.update()
+        command_list.extend(["--wavfile", wav_to_transmit_path])
     
-    print(f"Ejecutando: {' '.join(command)}")
+    command_str = ' '.join(command_list)
+    return command_list, command_str
 
-    status_label.value = f"Ejecutando: {' '.join(command)}"
+
+def sdr_transmission(page: ft.Page, status_label, command_label_ref, wav_to_transmit_path, selected_script_filename, sdr_options_controls):
+    
+    command_list, command_str_for_execution = build_sdr_command(
+        wav_to_transmit_path,
+        selected_script_filename,
+        sdr_options_controls,
+        get_scripts_dir()
+    )
+
+    if command_list is None:
+        status_label.value = command_str_for_execution 
+        if command_label_ref:
+             command_label_ref.value = f"Error en la construcción del comando:\n{command_str_for_execution}"
+        page.update()
+        return
+
+    if command_label_ref:
+        command_label_ref.value = f"Ejecutando:\n{command_str_for_execution}"
+        page.update() 
+        time.sleep(0.05) # Pequeña pausa para que Flet actualice UI
+    print(f"Ejecutando: {command_str_for_execution}")
+
+    status_label.value = f"Ejecutando: {selected_script_filename}..."
     page.update()
+    time.sleep(0.1) 
 
     try:
-        # Por ahora, solo esperamos a que termine
-        status_label.value += "\nScript de transmisión GNU Radio en ejecución..."
-        command_label.value = f"Comando a ejecutar:\n{' '.join(command)}"
-        page.update()
-        subprocess.run(command)
-        print(f"Comando ejecutado:\n{command}")
+        process = subprocess.Popen(command_list)
+        process.wait() 
 
-        status_label.value = f"Script '{selected_script_filename}' ejecutado. Ver consola para la salida."
+        if process.returncode == 0:
+            status_label.value = f"Script '{selected_script_filename}' ejecutado exitosamente."
+        else:
+            status_label.value = f"Script '{selected_script_filename}' finalizó con código de error {process.returncode}. Ver consola."
+        
+        print(f"Comando ejecutado:\n{' '.join(command_list)}")
 
     except FileNotFoundError:
-        status_label.value = f"Error: No se encontró Python ('{interprete_python}') o el script '{script_full_path}'."
-    # except subprocess.TimeoutExpired:
-    #     status_label.value = f"La ejecución del script '{selected_script_filename}' excedió el tiempo límite."
-        # process.kill()
+        python_interpreter_path = command_list[0] if command_list else "desconocido"
+        status_label.value = f"Error: No se encontró el intérprete Python ('{python_interpreter_path}') o el script '{selected_script_filename}'."
+    except subprocess.CalledProcessError as e: # No se usa con Popen directamente, pero por si acaso
+        status_label.value = f"Error durante la ejecución de '{selected_script_filename}': {e}. Ver consola."
     except Exception as e:
-        status_label.value = f"Error al ejecutar script GNU Radio: {e}"
+        status_label.value = f"Error inesperado al ejecutar script GNU Radio: {e}"
     
     page.update()
 
@@ -359,6 +374,7 @@ class MainApp:
 
         self.status_bar_text.value = "Estado: Listo. Todo reseteado."
         self.update_action_buttons_state()
+        self.update_sdr_command_display() 
         self.page.update()
 
     def load_url(self, e, img_tag, txt_url_ref, img_display_ref):
@@ -413,10 +429,12 @@ class MainApp:
         
         if img_tag == "A":
             image_a_source_path = path_to_set
-            self.reset_downstream_for_image("A")
+            reset_downstream_processing(self.page, "source_a_changed")
+            self.reset_downstream_for_image_ui("A")
         elif img_tag == "B":
             image_b_source_path = path_to_set
-            self.reset_downstream_for_image("B")
+            reset_downstream_processing(self.page, "source_b_changed")
+            self.reset_downstream_for_image_ui("B")
         
         self.update_action_buttons_state()
         self.page.update()
@@ -444,27 +462,23 @@ class MainApp:
 
         if img_tag == "A":
             image_a_source_path = path_to_set
-            self.reset_downstream_for_image("A")
+            reset_downstream_processing(self.page, "source_a_changed")
+            self.reset_downstream_for_image_ui("A")
         elif img_tag == "B":
             image_b_source_path = path_to_set
-            self.reset_downstream_for_image("B")
+            reset_downstream_processing(self.page, "source_b_changed")
+            self.reset_downstream_for_image_ui("B")
 
         self.update_action_buttons_state()
         self.page.update()
 
-    def reset_downstream_for_image(self, img_tag: str):
-        global preprocessed_a_path_generated, preprocessed_b_path_generated
-        global generated_apt_image_path, generated_wav_path
-
+    def reset_downstream_for_image_ui(self, img_tag: str):
+        """Actualiza la UI para los pasos posteriores al cambio de una imagen fuente."""
         if img_tag == "A":
-            preprocessed_a_path_generated = None
             self.preprocessed_a_display.src = PLACEHOLDER_PREPROCESSED_A_PENDING
         elif img_tag == "B":
-            preprocessed_b_path_generated = None
             self.preprocessed_b_display.src = PLACEHOLDER_PREPROCESSED_B_PENDING
         
-        generated_apt_image_path = None
-        generated_wav_path = None
         self.apt_image_display.src = PLACEHOLDER_APT_PENDING
         self.audio_status_text.value = "Audio APT: Aún no generado."
         
@@ -472,6 +486,7 @@ class MainApp:
         self.preprocessed_b_display.update()
         self.apt_image_display.update()
         self.audio_status_text.update()
+        self.update_sdr_command_display() # Actualizar comando ya que el WAV se resetea
 
 
     def do_preprocess_all(self, e):
@@ -493,25 +508,37 @@ class MainApp:
             preprocessed_a_path_generated = temp_preproc_a
             preprocessed_b_path_generated = temp_preproc_b
             self.status_bar_text.value = "Ambas imágenes preprocesadas."
+            reset_downstream_processing(self.page, "preprocess_changed") # Resetea APT y audio lógicamente
+            self.apt_image_display.src = PLACEHOLDER_APT_PENDING # Resetea UI de APT
+            self.audio_status_text.value = "Audio APT: Aún no generado." # Resetea UI de audio
+            self.apt_image_display.update()
+            self.audio_status_text.update()
+
         else:
             # Si uno falla, reseteamos ambos para evitar estado inconsistente para el siguiente paso
             preprocessed_a_path_generated = None
             preprocessed_b_path_generated = None
             if not temp_preproc_a: self.preprocessed_a_display.src = PLACEHOLDER_PREPROCESSED_A_PENDING
             if not temp_preproc_b: self.preprocessed_b_display.src = PLACEHOLDER_PREPROCESSED_B_PENDING
-            self.status_bar_text.value = "Error durante el preprocesamiento. Verifique que las imágenes fuente sean válidas."
-            # Reseteamos también APT y audio
-            self.reset_downstream_for_image("A") # Esto resetea APT y audio
-            self.reset_downstream_for_image("B") # Y esto también (redundante pero seguro)
+            self.status_bar_text.value = "Error durante el preprocesamiento. Verifique las imágenes fuente."
+            reset_downstream_processing(self.page, "preprocess_changed") # Resetea APT y audio lógicamente
+            self.reset_downstream_for_image_ui("A") # Esto resetea la UI de APT y audio también
 
         self.update_action_buttons_state()
+        self.update_sdr_command_display()
         self.page.update()
     
     def do_encode_apt_action(self, e):
         global generated_apt_image_path
         generated_apt_image_path = apt_encoding_img(self.page, self.status_bar_text, self.apt_image_display,
                                                     preprocessed_a_path_generated, preprocessed_b_path_generated)
+        if not generated_apt_image_path: # Si falló la codificación
+            reset_downstream_processing(self.page, "apt_encode_failed") # Lógica para resetear audio
+            self.audio_status_text.value = "Audio APT: Aún no generado." # UI para audio
+            self.audio_status_text.update()
+
         self.update_action_buttons_state()
+        self.update_sdr_command_display()
         self.page.update()
 
     def do_generate_audio_action(self, e):
@@ -519,6 +546,7 @@ class MainApp:
         generated_wav_path = audio_apt_generation(self.page, self.status_bar_text, self.audio_status_text,
                                                   generated_apt_image_path)
         self.update_action_buttons_state()
+        self.update_sdr_command_display() 
         self.page.update()
 
     def play_audio_apt_generated(self, e):
@@ -546,7 +574,7 @@ class MainApp:
 
     def open_output_folder(self, e):
         output_dir = get_app_files_dir()
-        if open_file_with_default_program(output_dir): # Asumiendo que open_file_with_default_program puede abrir carpetas
+        if open_file_with_default_program(output_dir):
             self.status_bar_text.value = f"Abriendo carpeta: {output_dir}"
         else:
             self.status_bar_text.value = f"No se pudo abrir la carpeta: {output_dir}. Revise la consola."
@@ -561,14 +589,58 @@ class MainApp:
         
         selected_script_filename = scripts_config[selected_script_display_name]
         
-        # Pasar referencias a los inputs para que sdr_transmission pueda leer sus valores
-        sdr_controls = {
+        sdr_options = {
             "FREQ_SDR": f"{self.slider_freq_tx_sdr.value}M",
             "SAMP_RATE_SDR": f"{self.slider_samp_rate_sdr.value}M"
         }
+        
+        self.update_sdr_command_display() # Asegura que el comando mostrado es el actual
+                                         # antes de pasarlo a sdr_transmission
+        
+        sdr_transmission(
+            self.page, 
+            self.status_bar_text, 
+            self.command_label_text, 
+            generated_wav_path,       
+            selected_script_filename, 
+            sdr_options
+        )
+        # sdr_transmission ya llama a page.update() internamente
+    
+    def update_sdr_command_display(self, e=None): 
+        global generated_wav_path 
 
-        sdr_transmission(self.page, self.status_bar_text, generated_wav_path, selected_script_filename, sdr_controls,self.command_label_text)
-        self.page.update()
+        selected_script_display_name = self.sdr_script_dropdown.value
+        if not hasattr(self, 'sdr_script_dropdown') or not selected_script_display_name:
+            self.command_label_text.value = "Configure los parámetros de transmisión."
+            if hasattr(self, 'page') and self.page: self.page.update()
+            return
+
+        selected_script_filename = scripts_config[selected_script_display_name]
+        
+        sdr_options = {
+            "FREQ_SDR": f"{self.slider_freq_tx_sdr.value}M",
+            "SAMP_RATE_SDR": f"{self.slider_samp_rate_sdr.value}M"
+        }
+        scripts_dir = get_scripts_dir()
+        current_wav_path = generated_wav_path
+        
+        _, cmd_str_display = build_sdr_command(
+            current_wav_path, 
+            selected_script_filename,
+            sdr_options,
+            scripts_dir
+        )
+
+        is_error_from_builder = cmd_str_display is not None and cmd_str_display.startswith("Error:")
+        final_display_str = f"Comando (referencia):\n{cmd_str_display if cmd_str_display else 'No se pudo construir el comando.'}"
+
+        if not is_error_from_builder and \
+           (not current_wav_path or not os.path.exists(current_wav_path)): # Solo añade nota si el WAV no está
+            final_display_str += "\n(Nota: Archivo WAV no generado aún.)"
+        
+        self.command_label_text.value = final_display_str
+        if hasattr(self, 'page') and self.page: self.page.update()
 
 
     def update_action_buttons_state(self):
@@ -598,19 +670,22 @@ class MainApp:
         self.btn_load_url_a.disabled = not self.txt_url_a.value.strip()
         self.btn_load_url_b.disabled = not self.txt_url_b.value.strip()
 
-        self.page.update()
+        if hasattr(self, 'page') and self.page: self.page.update()
 
+
+    def on_sdr_script_dropdown_change(self, e):
+        self.update_action_buttons_state()
+        self.update_sdr_command_display()
 
     def setup_ui(self):
         self.page.title = f"{APP_NAME} | Simulador de pases NOAA"
         self.page.window_width = 1050
-        self.page.window_height = 850 # Un poco más alto para el dropdown
+        self.page.window_height = 850 
         self.page.padding = 0
         self.page.vertical_alignment = ft.MainAxisAlignment.START
         self.page.horizontal_alignment = ft.CrossAxisAlignment.CENTER
 
         self.status_bar_text = ft.Text("Estado: Listo.", expand=True, no_wrap=True, overflow=ft.TextOverflow.ELLIPSIS,selectable=True)
-        self.command_label_text = ft.Text("", expand=True, no_wrap=True, overflow=ft.TextOverflow.ELLIPSIS,selectable=True)
         status_bar = ft.Container(
             content=ft.Row([
                 self.status_bar_text,
@@ -624,7 +699,7 @@ class MainApp:
         app_bar = ft.AppBar(
             title=ft.Text(f"{APP_NAME} | Simulador de Pases Satelitales NOAA"),
             center_title=False,
-            bgcolor=ft.Colors.SURFACE, # Un color sutil
+            bgcolor=ft.Colors.with_opacity(0.05, ft.Colors.SURFACE),
             actions=[
                 ft.PopupMenuButton(
                     items=[
@@ -663,7 +738,6 @@ class MainApp:
                             ft.Row([self.txt_url_a, self.btn_load_url_a], alignment=ft.MainAxisAlignment.CENTER, spacing=5,width=450,wrap=True),
                             ft.ElevatedButton("Archivo Local A", icon=ft.Icons.FOLDER_OPEN, on_click=lambda _: file_picker_a.pick_files(allow_multiple=False, allowed_extensions=["jpg", "jpeg", "png", "bmp"]), width=self.txt_url_a.width + self.btn_load_url_a.width + 5),
                         ], horizontal_alignment=ft.CrossAxisAlignment.CENTER, spacing=10),
-                        # ft.VerticalDivider(width=30),
                         ft.Column([
                             ft.Text("Imagen B", weight=ft.FontWeight.BOLD), self.img_b_clickable,
                             ft.Row([self.txt_url_b, self.btn_load_url_b], alignment=ft.MainAxisAlignment.CENTER, spacing=5,width=450,wrap=True),
@@ -728,28 +802,30 @@ class MainApp:
             options=[ft.dropdown.Option(key=name) for name in scripts_config.keys()],
             value=list(scripts_config.keys())[0], # Seleccionar el primero por defecto
             width=400,
-            on_change=lambda e: self.update_action_buttons_state()
+            on_change=self.on_sdr_script_dropdown_change
         )
 
         def slider_input_freq_tx_sdr_changed(e):
             self.slider_freq_tx_sdr.value=round(self.slider_freq_tx_sdr.value,1)
             self.text_value_freq_tx_sdr.value = f"{self.slider_freq_tx_sdr.value} MHz"
+            self.update_sdr_command_display()
             self.page.update()
         
         def slider_samp_rate_sdr_changed(e):
             self.slider_samp_rate_sdr.value=round(self.slider_samp_rate_sdr.value,1)
             self.text_value_samp_rate_sdr.value = f"{self.slider_samp_rate_sdr.value} MHz"
+            self.update_sdr_command_display()
             self.page.update()
 
         self.text_freq_tx_sdr=ft.Text("Frecuencia de transmisión:")
-        self.slider_freq_tx_sdr = ft.Slider(value=928,min=88,max=3000,label="{value} MHz",on_change=slider_input_freq_tx_sdr_changed,divisions=(3000-88))
+        self.slider_freq_tx_sdr = ft.Slider(value=137.5,min=88,max=1700,label="{value} MHz",on_change=slider_input_freq_tx_sdr_changed,divisions=(1700-88)/0.1, round=1) # (max-min)/step
         self.text_value_freq_tx_sdr=ft.Text(f"{self.slider_freq_tx_sdr.value} MHz")
         
         self.text_samp_rate_sdr=ft.Text("Frecuencia de muestreo SDR (sample rate):")
-        self.slider_samp_rate_sdr = ft.Slider(value=8,min=0.2,max=10,label="{value} MHz",
-        on_change=slider_samp_rate_sdr_changed,divisions=98)
+        self.slider_samp_rate_sdr = ft.Slider(value=2.4,min=0.2,max=20,label="{value} MHz", on_change=slider_samp_rate_sdr_changed,divisions=(20-0.2)/0.1, round=1) # (max-min)/step
         self.text_value_samp_rate_sdr=ft.Text(f"{self.slider_samp_rate_sdr.value} MHz")
         
+        self.command_label_text = ft.Text("Comando:\nEsperando configuración...", expand=True, selectable=True, no_wrap=False) # no_wrap=False para permitir multilínea
         self.btn_transmit = ft.ElevatedButton("Transmitir con SDR", icon=ft.Icons.SEND, on_click=self.do_transmit_sdr, disabled=True)
 
         tab3_content = ft.ListView( expand=True, spacing=15, padding=20,
@@ -762,8 +838,15 @@ class MainApp:
                 ft.Row([self.text_samp_rate_sdr,self.text_value_samp_rate_sdr]),
                 self.slider_samp_rate_sdr,
                 ft.Text("Nota: Ajustar parámetros según el SDR a utilizar", italic=True, size=12),
-                ft.Divider(height=20),
-                self.command_label_text,
+                ft.Divider(height=10),
+                ft.Text("Comando a ejecutar por GNU Radio:", weight=ft.FontWeight.BOLD),
+                ft.Container(
+                    content=self.command_label_text, 
+                    padding=10, 
+                    border=ft.border.all(1, ft.Colors.OUTLINE_VARIANT), 
+                    border_radius=5
+                ),
+                ft.Divider(height=10),
                 ft.Container(content=self.btn_transmit, alignment=ft.alignment.center),
             ]
         )
@@ -785,18 +868,25 @@ class MainApp:
                 expand=True, spacing=0
             )
         )
-        self.update_action_buttons_state()
+        # self.update_action_buttons_state() # Se llama desde reset_all_processing_state_and_ui
+        # self.update_sdr_command_display() # Se llama desde reset_all_processing_state_and_ui
+
 
 # --- Main ---
-import sys # Necesario para sys.executable y sys.frozen
-
 def main(page: ft.Page):
-    # Crear directorios necesarios al inicio
     get_app_files_dir()
-    get_scripts_dir()
-    
+    scripts_dir=get_scripts_dir()
+
+    # Asegurar que la carpeta de scripts existe antes de que la UI intente acceder a ella
+    # (aunque get_scripts_dir ya lo hace, es bueno ser explícito si es crítico para el inicio)
+    if not os.path.isdir(scripts_dir):
+        # Manejar error si no se puede crear la carpeta de scripts
+        page.add(ft.Text(f"Error: No se pudo crear o acceder a la carpeta de scripts: {scripts_dir}"))
+        return
+
     app_instance = MainApp(page)
-    # page.update() # No es necesario, MainApp o sus métodos se encargan
+    # page.update() # MainApp o sus métodos se encargan
 
 if __name__ == "__main__":
-    ft.app(target=main)
+    ft.app(target=main, assets_dir="assets") # En caso de tener una carpeta 'assets' con icon.png u otros assets
+    # ft.app(target=main)
