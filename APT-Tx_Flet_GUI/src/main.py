@@ -214,7 +214,7 @@ def audio_apt_generation(page: ft.Page, status_label, audio_status_text, apt_img
         return None
 
 
-def sdr_transmission(page: ft.Page, status_label, wav_to_transmit_path, selected_script_filename, sdr_options_controls):
+def sdr_transmission(page: ft.Page, status_label, wav_to_transmit_path, selected_script_filename, sdr_options_controls,command_label):
     if not wav_to_transmit_path or not os.path.exists(wav_to_transmit_path):
         status_label.value = "Error: No hay archivo WAV para transmitir o el archivo no existe."
         page.update()
@@ -260,6 +260,7 @@ def sdr_transmission(page: ft.Page, status_label, wav_to_transmit_path, selected
     try:
         # Por ahora, solo esperamos a que termine
         status_label.value += "\nScript de transmisión GNU Radio en ejecución..."
+        command_label.value = f"Comando a ejecutar:\n{' '.join(command)}"
         page.update()
         subprocess.run(command)
         print(f"Comando ejecutado:\n{command}")
@@ -562,7 +563,7 @@ class MainApp:
             "SAMP_RATE_SDR": f"{self.slider_samp_rate_sdr.value}M"
         }
 
-        sdr_transmission(self.page, self.status_bar_text, generated_wav_path, selected_script_filename, sdr_controls)
+        sdr_transmission(self.page, self.status_bar_text, generated_wav_path, selected_script_filename, sdr_controls,self.command_label_text)
         self.page.update()
 
 
@@ -605,6 +606,7 @@ class MainApp:
         self.page.horizontal_alignment = ft.CrossAxisAlignment.CENTER
 
         self.status_bar_text = ft.Text("Estado: Listo.", expand=True, no_wrap=True, overflow=ft.TextOverflow.ELLIPSIS,selectable=True)
+        self.command_label_text = ft.Text("", expand=True, no_wrap=True, overflow=ft.TextOverflow.ELLIPSIS,selectable=True)
         status_bar = ft.Container(
             content=ft.Row([
                 self.status_bar_text,
@@ -757,6 +759,7 @@ class MainApp:
                 self.slider_samp_rate_sdr,
                 ft.Text("Nota: Ajustar parámetros según el SDR a utilizar", italic=True, size=12),
                 ft.Divider(height=20),
+                self.command_label_text,
                 ft.Container(content=self.btn_transmit, alignment=ft.alignment.center),
             ]
         )
