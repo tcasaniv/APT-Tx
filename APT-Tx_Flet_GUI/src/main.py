@@ -248,9 +248,13 @@ def sdr_transmission(page: ft.Page, status_label, wav_to_transmit_path, selected
         interprete_python,
         "-u", script_full_path,
         "--freq-sdr",sdr_options_controls["FREQ_SDR"],
-        "--samp-rate-sdr", sdr_options_controls["SAMP_RATE_SDR"],
-        "--wavfile", wav_to_transmit_path
+        "--samp-rate-sdr", sdr_options_controls["SAMP_RATE_SDR"]
         ]
+
+    if wav_to_transmit_path and os.path.exists(wav_to_transmit_path):
+        command.extend(["--wavfile", wav_to_transmit_path])
+    command_label.value = f"Comando a ejecutar:\n{' '.join(command)}"
+    page.update()
     
     print(f"Ejecutando: {' '.join(command)}")
 
