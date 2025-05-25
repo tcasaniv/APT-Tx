@@ -26,8 +26,7 @@ from PyQt5 import Qt
 from argparse import ArgumentParser
 from gnuradio.eng_arg import eng_float, intx
 from gnuradio import eng_notation
-from gnuradio import uhd
-import time
+from gnuradio import soapy
 import sip
 import threading
 import transmit_sdr_detect_platform as detect_platform  # embedded python module
@@ -143,23 +142,21 @@ class transmit_sdr(gr.top_block, Qt.QWidget):
         for c in range(0, 1):
             self.top_grid_layout.setColumnStretch(c, 1)
         self.wavfile_source = blocks.wavfile_source(wav_path, True)
-        self.uhd_usrp_sink_0 = uhd.usrp_sink(
-            ",".join(("", '')),
-            uhd.stream_args(
-                cpu_format="fc32",
-                args='',
-                channels=list(range(0,1)),
-            ),
-            "",
-        )
-        self.uhd_usrp_sink_0.set_samp_rate(samp_rate_sdr)
-        self.uhd_usrp_sink_0.set_time_unknown_pps(uhd.time_spec(0))
-
-        self.uhd_usrp_sink_0.set_center_freq(freq, 0)
-        self.uhd_usrp_sink_0.set_antenna("TX/RX", 0)
-        self.uhd_usrp_sink_0.set_normalized_gain(gain, 0)
         self.throttle_sdr_gui = blocks.throttle( gr.sizeof_gr_complex*1, samp_rate_sdr, True, 0 if "auto" == "auto" else max( int(float(0.1) * samp_rate_sdr) if "auto" == "time" else int(0.1), 1) )
         self.throttle_fm = blocks.throttle( gr.sizeof_gr_complex*1, fm_rate, True, 0 if "auto" == "auto" else max( int(float(0.1) * fm_rate) if "auto" == "time" else int(0.1), 1) )
+        self.soapy_limesdr_sink_0 = None
+        dev = 'driver=lime'
+        stream_args = ''
+        tune_args = ['']
+        settings = ['']
+
+        self.soapy_limesdr_sink_0 = soapy.sink(dev, "fc32", 1, '',
+                                  stream_args, tune_args, settings)
+        self.soapy_limesdr_sink_0.set_sample_rate(0, samp_rate_sdr)
+        self.soapy_limesdr_sink_0.set_bandwidth(0, 0.0)
+        self.soapy_limesdr_sink_0.set_frequency(0, freq)
+        self.soapy_limesdr_sink_0.set_frequency_correction(0, 0)
+        self.soapy_limesdr_sink_0.set_gain(0, min(max(((76*gain)-12), -12.0), 64.0))
         self.sdr_gui_freq_sink = qtgui.freq_sink_c(
             1024, #size
             window.WIN_BLACKMAN_hARRIS, #wintype
@@ -349,8 +346,8 @@ class transmit_sdr(gr.top_block, Qt.QWidget):
         self.connect((self.analog_nbfm_rx, 0), (self.audio_sink, 0))
         self.connect((self.analog_nbfm_tx, 0), (self.analog_nbfm_rx, 0))
         self.connect((self.analog_nbfm_tx, 0), (self.fm_rational_resampler, 0))
+        self.connect((self.analog_nbfm_tx, 0), (self.soapy_limesdr_sink_0, 0))
         self.connect((self.analog_nbfm_tx, 0), (self.throttle_fm, 0))
-        self.connect((self.analog_nbfm_tx, 0), (self.uhd_usrp_sink_0, 0))
         self.connect((self.audio_rational_resampler, 0), (self.analog_nbfm_tx, 0))
         self.connect((self.audio_rational_resampler, 0), (self.audio_gui_freq_sink, 0))
         self.connect((self.control_volume, 0), (self.audio_rational_resampler, 0))
@@ -381,8 +378,8 @@ class transmit_sdr(gr.top_block, Qt.QWidget):
     def set_samp_rate_sdr(self, samp_rate_sdr):
         self.samp_rate_sdr = samp_rate_sdr
         self.sdr_gui_freq_sink.set_frequency_range(self.freq, self.samp_rate_sdr)
+        self.soapy_limesdr_sink_0.set_sample_rate(0, self.samp_rate_sdr)
         self.throttle_sdr_gui.set_sample_rate(self.samp_rate_sdr)
-        self.uhd_usrp_sink_0.set_samp_rate(self.samp_rate_sdr)
 
     def get_wavfile(self):
         return self.wavfile
@@ -417,7 +414,7 @@ class transmit_sdr(gr.top_block, Qt.QWidget):
 
     def set_gain(self, gain):
         self.gain = gain
-        self.uhd_usrp_sink_0.set_normalized_gain(self.gain, 0)
+        self.soapy_limesdr_sink_0.set_gain(0, min(max(((76*self.gain)-12), -12.0), 64.0))
 
     def get_freq(self):
         return self.freq
@@ -425,7 +422,7 @@ class transmit_sdr(gr.top_block, Qt.QWidget):
     def set_freq(self, freq):
         self.freq = freq
         self.sdr_gui_freq_sink.set_frequency_range(self.freq, self.samp_rate_sdr)
-        self.uhd_usrp_sink_0.set_center_freq(self.freq, 0)
+        self.soapy_limesdr_sink_0.set_frequency(0, self.freq)
 
     def get_fm_rate(self):
         return self.fm_rate

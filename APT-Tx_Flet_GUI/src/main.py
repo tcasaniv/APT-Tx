@@ -38,12 +38,12 @@ generated_wav_path = None
 # --- Configuración de Scripts GNU Radio ---
 # Debes crear estos scripts en la carpeta "scripts" o donde corresponda
 scripts_config = {
-    "Simulación (Audio/Gráfica)": "simulate_fm.py",
-    "HackRF (Simulación)": "simulate_hackrf.py",
-    "HackRF (Transmisión Real en silencio)": "transmit_hackrf_muted.py",
+    "Simulación (sin SDR)": "simulate_sdr.py",
+    "Simulación (sin SDR | sin audio)": "simulate_sdr_no_audio.py",
     "HackRF (Transmisión Real)": "transmit_hackrf.py",
-    "USRP (Simulación)": "transmit_usrp.py", # Asumiendo que es el mismo para los 3 casos de USRP
-    "USRP (Transmisión Real en silencio)": "transmit_usrp.py",
+    "bladeRF (Transmisión Real)": "transmit_bladerf.py",
+    "LimeSDR (Transmisión Real)": "transmit_limesdr.py",
+    "PlutoSDR (Transmisión Real)": "transmit_pluto.py",
     "USRP (Transmisión Real)": "transmit_usrp.py",
 }
 
