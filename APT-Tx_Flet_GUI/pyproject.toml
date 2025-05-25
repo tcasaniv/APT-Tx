@@ -8,11 +8,11 @@ authors = [
     { name = "Terry Joel Casani Valencia", email = "tcasaniv@gmail.com" }
 ]
 dependencies = [
-  "flet==0.28.3",
-  "numpy==2.2.6",
-  "requests==2.32.3",
-  "pillow==11.2.1",
-  "scipy==1.15.3"
+  "flet==0.26.0",
+  "numpy",
+  "requests",
+  "pillow",
+  "scipy"
 ]
 
 [tool.flet]
