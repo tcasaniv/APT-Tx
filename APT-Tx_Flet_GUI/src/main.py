@@ -633,7 +633,7 @@ class MainApp:
         )
 
         is_error_from_builder = cmd_str_display is not None and cmd_str_display.startswith("Error:")
-        final_display_str = f"Comando (referencia):\n{cmd_str_display if cmd_str_display else 'No se pudo construir el comando.'}"
+        final_display_str = f"Abrir una terminal y pegar el comando:\n{cmd_str_display if cmd_str_display else 'No se pudo construir el comando.'}"
 
         if not is_error_from_builder and \
            (not current_wav_path or not os.path.exists(current_wav_path)): # Solo añade nota si el WAV no está
