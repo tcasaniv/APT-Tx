@@ -1,0 +1,5 @@
+flet[all]
+numpy
+requests
+pillow
+scipy

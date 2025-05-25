@@ -1,51 +1,141 @@
 # APT-Tx
-Este programa convierte imágenes en una señal de audio en formato WAV, adecuada para ser transmitida mediante el método de transmisión de imagen de satélite NOAA APT.
+Este programa convierte imágenes en una señal de audio en formato WAV, adecuada para ser transmitida mediante el método de transmisión de imagen de satélite NOAA APT usando usando un equipo SDR (Radio Definida por Software).
 
-## Pre-procesar imágenes
+## Configuración entorno de desarrollo Python
 
-- Se elige una imagen a color en formato PNG, JPG, etc.
-- Se coloca la ruta dentro del archivo `convert_img.py`.
-- Se ejecuta el código python para convertir a una imagen BMP de 24 bits.
-- La imagen queda guardada en la carpeta BMP.
-
-## APT Encoder + Modulador FM + Modulador I/Q (bin)
-
-- A partir de la imagen en BMP generamos audio APT en formato WAV
-- Este WAV luego se modula en FM y se convierte a señal I/Q.
-- Se guarda la señal I/Q en formato .bin
-
-Todo ese proceso se logra con el siguiente comando para transmitir una sola imagen BMP.
-```PS
-PS APT-Tx> 
-PS APT-Tx> & '.\APT_Tx.exe' '.\BMP\imgA.bmp' output_APT.wav output_APT.bin
+- Instalar python.
+- Crear entorno virtual:
+```sh
+python -m venv venv
 ```
 
-O con el siguiente comando para transmitir dos imágenes BMP distintas.
-```PS
-PS APT-Tx> 
-PS APT-Tx> & '.\APT_Tx_AB.exe' '.\BMP\imgA.bmp' '.\BMP\imgB.bmp'  output_APT.wav output_APT.bin
+Una vez creado, el entorno virtual debe activarse. En Windows, puedes hacerlo con:
+
+```pwsh
+venv\Scripts\activate
 ```
 
-# Transmitir muestras I/Q con HackRF
+En sistemas Unix (macOS y Linux), usa:
 
-Podemos transmitir el archivo I/Q generado con extensión .bin con un hackRF.
-
-Para ello usamos el siguiente comando:
-
-```PS
-PS APT-Tx> 
-PS APT-Tx> hackrf_transfer -t ".\output_APT.bin" -f 137500000 -s 2822400 -a 1  -x 40 -b 1750000
+```sh
+source venv/bin/activate
 ```
 
-Con ello estamos transmitiendo el archivo de muestras I/Q  a una frecuencia central de 137.5 MHz con una frecuencia de muestreo de 2.822400 MHz (44100 * 64) con el amplificador de potencia activado y con una ganancia de 40. Además se le está aplicando un filtro de ancho de banda de 1.75 MHz.
+Luego, se deben instalar las dependencias con:
 
+```sh
+pip install -r requirements.txt 
+```
 
-## Visualizar archivo I/Q (sin transmitir)
+## Iniciar APT-Tx con GUI (desarrollo)
 
-Podemos visualizar el archivo I/Q desde el programa SDR#.
-- Para ello vamos en la opción de Source/Fuente y seleccionamos `Baseband File Player`.
-- Seleccionamos el archivo .bin.
-- Ingresamos el Sample Rate de 2822400 Hz.
-- Con 16 Bits por muestra.
-- Y solo un canal.
-Con ello podremos ver la señal sin necesidad de transmitir con un transmisor SDR.
+Se puede iniciar la GUI con `Python` o con el comando `flet`:
+
+```sh
+# python src/main.py
+flet run
+```
+
+- Se elige dos imágenes a color desde un enlace o archivo local.
+- Se hace el preprocesamiento para tenerlas en escala de grises y con ancho de 909 px.
+- A partir de las imágenes generamos una imagen APT.
+- A partir de la imagen APT generamos audio APT en formato WAV.
+
+### Transmitir señal APT con SDR
+
+Podemos transmitir el archivo WAV generado con un script hecho en GNU Radio y un SDR (hackRF, USRP, bladeRF, LimeSDR, PlutoSDR).
+
+El flowgraph en GNU Radio permite modular el archivo WAV en FM con 17 kHz de desviación, resultando una señal de 34 kHz de ancho de banda.
+Luego usa el bloque correspondiente al SDR para transmitir la señal.
+
+> Nota: Este flowgraph está incluido en el programa pero se debe instalar GNU Radio a parte.
+
+## Decodificar APT (sin transmitir)
+
+Podemos decodificar el archivo WAV con un programa como satdump o noaa-apt-decoder y así obtener de nuevo la imagen APT.
+
+## Crear la aplicación
+
+### Android
+
+> Nota: De momento no están disponibles todas las dependencias para Android por lo que fallará el comando.
+
+```
+flet build apk -v
+```
+
+Para más detalles sobre la creación y firma de `.apk` o `.aab`, consulte la [Guía de Empaquetado de Android](https://flet.dev/docs/publish/android/).
+
+### iOS
+
+> Nota: De momento no están disponibles todas las dependencias para iOS por lo que fallará el comando.
+
+```
+flet build ipa -v
+```
+
+Para obtener más información sobre cómo crear y firmar `.ipa`, consulta la [Guía de empaquetado de iOS](https://flet.dev/docs/publish/ios/).
+
+### macOS
+
+```
+flet build macos -v
+```
+
+Para obtener más información sobre la creación de paquetes de macOS, consulte la [Guía de empaquetado de macOS](https://flet.dev/docs/publish/macos/).
+
+### Linux
+
+```
+flet build linux -v
+```
+
+Para más detalles sobre la creación de paquetes Linux, consulte la [Guía de Empaquetado Linux](https://flet.dev/docs/publish/linux/).
+
+### Windows
+
+```
+flet build windows -v
+```
+
+Para más detalles sobre la creación de paquetes Windows, consulte la [Guía de Empaquetado Windows](https://flet.dev/docs/publish/windows/).
+
+## Alternativa para ejecutar la app
+
+De manera alternativa a `venv` y al comando `flet` uno puede usar `uv` o `Poetry` para instalar dependencias y ejecutar la app.
+
+### uv
+
+Ejecutar como una aplicación de escritorio:
+
+```a
+uv run flet run
+```
+
+Ejecutar como una aplicación web:
+
+```
+uv run flet run --web
+```
+
+### Poetry
+
+Instalar dependencias de `pyproject.toml`:
+
+```
+poetry install
+```
+
+Ejecutar como una aplicación de escritorio:
+
+```
+poetry run flet run
+```
+
+Ejecutar como una aplicación web:
+
+```
+poetry run flet run --web
+```
+
+Para más detalles sobre el funcionamiento de la aplicación, consulte la [Guía de introducción](https://flet.dev/docs/getting-started/).

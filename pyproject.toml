@@ -1,0 +1,49 @@
+[project]
+name = "apt_tx"
+version = "1.0.0"
+description = "Transmite tus imágenes en formato APT como si se tratara de un satélite NOAA"
+readme = "README.md"
+requires-python = ">=3.9"
+authors = [
+    { name = "Terry Joel Casani Valencia", email = "tcasaniv@gmail.com" }
+]
+dependencies = [
+  "flet==0.26.0",
+  "numpy",
+  "requests",
+  "pillow",
+  "scipy"
+]
+
+[tool.flet]
+# org name in reverse domain name notation, e.g. "com.mycompany".
+# Combined with project.name to build bundle ID for iOS and Android apps
+org = "com.tcasaniv"
+
+# project display name that is used as an app title on Android and iOS home screens,
+# shown in window titles and about app dialogs on desktop.
+product = "apt_tx"
+
+# company name to display in about app dialogs
+company = "tcasaniv"
+
+# copyright text to display in about app dialogs
+copyright = "Copyright (C) 2025 by tcasaniv"
+
+# compile.app = true # --compile-app
+# compile.packages = true # --compile-packages
+# compile.cleanup = true # --cleanup-on-compile
+
+[tool.flet.app]
+path = "src"
+
+[tool.uv]
+dev-dependencies = [
+    "flet[all]==0.28.2",
+]
+
+[tool.poetry]
+package-mode = false
+
+[tool.poetry.group.dev.dependencies]
+flet = {extras = ["all"], version = "0.28.3"}
