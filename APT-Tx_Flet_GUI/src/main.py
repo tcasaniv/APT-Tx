@@ -244,6 +244,9 @@ def build_sdr_command(wav_to_transmit_path, selected_script_filename, sdr_option
 
     if wav_to_transmit_path and os.path.exists(wav_to_transmit_path):
         command_list.extend(["--wavfile", wav_to_transmit_path])
+    else:
+        command_list.extend(["--wavfile", 'apt_generated_audio.wav'])
+
     
     command_str = ' '.join(command_list)
     return command_list, command_str
