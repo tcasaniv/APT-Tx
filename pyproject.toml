@@ -1,5 +1,5 @@
 [project]
-name = "apt_tx_flet_gui"
+name = "apt_tx"
 version = "1.0.0"
 description = "Transmite tus imágenes en formato APT como si se tratara de un satélite NOAA"
 readme = "README.md"
@@ -22,7 +22,7 @@ org = "com.tcasaniv"
 
 # project display name that is used as an app title on Android and iOS home screens,
 # shown in window titles and about app dialogs on desktop.
-product = "apt_tx_flet_gui"
+product = "apt_tx"
 
 # company name to display in about app dialogs
 company = "tcasaniv"
