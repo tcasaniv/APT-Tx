@@ -58,6 +58,8 @@ Podemos decodificar el archivo WAV con un programa como satdump o noaa-apt-decod
 
 ### Android
 
+> Nota: De momento no están disponibles todas las dependencias para Android por lo que fallará el comando.
+
 ```
 flet build apk -v
 ```
@@ -65,6 +67,8 @@ flet build apk -v
 Para más detalles sobre la creación y firma de `.apk` o `.aab`, consulte la [Guía de Empaquetado de Android](https://flet.dev/docs/publish/android/).
 
 ### iOS
+
+> Nota: De momento no están disponibles todas las dependencias para iOS por lo que fallará el comando.
 
 ```
 flet build ipa -v
