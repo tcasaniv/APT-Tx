@@ -604,11 +604,11 @@ class MainApp:
         self.page.vertical_alignment = ft.MainAxisAlignment.START
         self.page.horizontal_alignment = ft.CrossAxisAlignment.CENTER
 
-        self.status_bar_text = ft.Text("Estado: Listo.", expand=True, no_wrap=True, overflow=ft.TextOverflow.ELLIPSIS)
+        self.status_bar_text = ft.Text("Estado: Listo.", expand=True, no_wrap=True, overflow=ft.TextOverflow.ELLIPSIS,selectable=True)
         status_bar = ft.Container(
             content=ft.Row([
                 self.status_bar_text,
-                ft.Text(VERSION_APP+" | "+platform.system(), size=10)
+                ft.Text(VERSION_APP+" | "+platform.system(), size=10,selectable=True)
             ], vertical_alignment=ft.CrossAxisAlignment.CENTER),
             padding=ft.padding.symmetric(horizontal=10, vertical=5),
             bgcolor=ft.Colors.with_opacity(0.9, ft.Colors.SURFACE), # Un color sutil
@@ -678,7 +678,7 @@ class MainApp:
         self.apt_image_display = ft.Image(width=600, height=200, fit=ft.ImageFit.CONTAIN, border_radius=10, src=PLACEHOLDER_APT_PENDING)
         self.apt_image_clickable = ft.GestureDetector(content=self.apt_image_display, on_tap=lambda e: self.open_image_in_viewer(e, self.apt_image_display))
         
-        self.audio_status_text = ft.Text("Audio APT: Aún no generado.",text_align=ft.TextAlign.CENTER)
+        self.audio_status_text = ft.Text("Audio APT: Aún no generado.",text_align=ft.TextAlign.CENTER,selectable=True)
 
         self.btn_preprocess = ft.ElevatedButton("1. Preprocesar Imágenes", icon=ft.Icons.IMAGE_SEARCH, on_click=self.do_preprocess_all, disabled=True)
         self.btn_encode_apt = ft.ElevatedButton("2. Codificar a APT", icon=ft.Icons.TRANSFORM, on_click=self.do_encode_apt_action, disabled=True)
