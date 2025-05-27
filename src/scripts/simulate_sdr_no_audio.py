@@ -5,7 +5,7 @@
 # SPDX-License-Identifier: GPL-3.0
 #
 # GNU Radio Python Flow Graph
-# Title: Simulación sin SDR (no audio)
+# Title: Transmisión sin SDR
 # Author: tcasaniv
 # GNU Radio version: 3.10.12.0
 
@@ -34,9 +34,9 @@ import transmit_sdr_detect_platform as detect_platform  # embedded python module
 class transmit_sdr(gr.top_block, Qt.QWidget):
 
     def __init__(self, freq_sdr=928e6, samp_rate_sdr=8e6, wavfile=detect_platform.wav_path):
-        gr.top_block.__init__(self, "Simulación sin SDR (no audio)", catch_exceptions=True)
+        gr.top_block.__init__(self, "Transmisión sin SDR", catch_exceptions=True)
         Qt.QWidget.__init__(self)
-        self.setWindowTitle("Simulación sin SDR (no audio)")
+        self.setWindowTitle("Transmisión sin SDR")
         qtgui.util.check_set_qss()
         try:
             self.setWindowIcon(Qt.QIcon.fromTheme('gnuradio-grc'))
@@ -88,7 +88,7 @@ class transmit_sdr(gr.top_block, Qt.QWidget):
         ##################################################
 
         self._volume_range = qtgui.Range(0, 300, 1, 50, 200)
-        self._volume_win = qtgui.RangeWidget(self._volume_range, self.set_volume, "Volumen", "counter_slider", float, QtCore.Qt.Horizontal)
+        self._volume_win = qtgui.RangeWidget(self._volume_range, self.set_volume, "Volumen\nAudio Fuente", "counter_slider", float, QtCore.Qt.Horizontal)
         self.top_grid_layout.addWidget(self._volume_win, 0, 1, 1, 2)
         for r in range(0, 1):
             self.top_grid_layout.setRowStretch(r, 1)
@@ -110,8 +110,8 @@ class transmit_sdr(gr.top_block, Qt.QWidget):
         self.tab_widget_grid_layout_2 = Qt.QGridLayout()
         self.tab_widget_layout_2.addLayout(self.tab_widget_grid_layout_2)
         self.tab_widget.addTab(self.tab_widget_widget_2, 'Señal transmitiéndose por el SDR')
-        self.top_grid_layout.addWidget(self.tab_widget, 2, 0, 5, 4)
-        for r in range(2, 7):
+        self.top_grid_layout.addWidget(self.tab_widget, 2, 0, 4, 4)
+        for r in range(2, 6):
             self.top_grid_layout.setRowStretch(r, 1)
         for c in range(0, 4):
             self.top_grid_layout.setColumnStretch(c, 1)
@@ -176,7 +176,63 @@ class transmit_sdr(gr.top_block, Qt.QWidget):
             self.sdr_gui_freq_sink.set_line_alpha(i, alphas[i])
 
         self._sdr_gui_freq_sink_win = sip.wrapinstance(self.sdr_gui_freq_sink.qwidget(), Qt.QWidget)
-        self.tab_widget_layout_2.addWidget(self._sdr_gui_freq_sink_win)
+        self.tab_widget_grid_layout_2.addWidget(self._sdr_gui_freq_sink_win, 0, 0, 1, 4)
+        for r in range(0, 1):
+            self.tab_widget_grid_layout_2.setRowStretch(r, 1)
+        for c in range(0, 4):
+            self.tab_widget_grid_layout_2.setColumnStretch(c, 1)
+        self.qtgui_time_sink_audio = qtgui.time_sink_f(
+            512, #size
+            12000, #samp_rate
+            "", #name
+            1, #number of inputs
+            None # parent
+        )
+        self.qtgui_time_sink_audio.set_update_time(0.10)
+        self.qtgui_time_sink_audio.set_y_axis(-1, 1)
+
+        self.qtgui_time_sink_audio.set_y_label('Amplitud', "")
+
+        self.qtgui_time_sink_audio.enable_tags(False)
+        self.qtgui_time_sink_audio.set_trigger_mode(qtgui.TRIG_MODE_AUTO, qtgui.TRIG_SLOPE_POS, 0.0, 0, 0, "")
+        self.qtgui_time_sink_audio.enable_autoscale(False)
+        self.qtgui_time_sink_audio.enable_grid(True)
+        self.qtgui_time_sink_audio.enable_axis_labels(True)
+        self.qtgui_time_sink_audio.enable_control_panel(True)
+        self.qtgui_time_sink_audio.enable_stem_plot(False)
+
+
+        labels = ["Audio APT\ngenerado", '', 'Signal 3', 'Signal 4', 'Signal 5',
+            'Signal 6', 'Signal 7', 'Signal 8', 'Signal 9', 'Signal 10']
+        widths = [1, 1, 1, 1, 1,
+            1, 1, 1, 1, 1]
+        colors = ['blue', 'green', 'green', 'black', 'cyan',
+            'magenta', 'yellow', 'dark red', 'dark green', 'dark blue']
+        alphas = [1.0, 1.0, 1.0, 1.0, 1.0,
+            1.0, 1.0, 1.0, 1.0, 1.0]
+        styles = [1, 1, 1, 1, 1,
+            1, 1, 1, 1, 1]
+        markers = [-1, -1, -1, -1, -1,
+            -1, -1, -1, -1, -1]
+
+
+        for i in range(1):
+            if len(labels[i]) == 0:
+                self.qtgui_time_sink_audio.set_line_label(i, "Data {0}".format(i))
+            else:
+                self.qtgui_time_sink_audio.set_line_label(i, labels[i])
+            self.qtgui_time_sink_audio.set_line_width(i, widths[i])
+            self.qtgui_time_sink_audio.set_line_color(i, colors[i])
+            self.qtgui_time_sink_audio.set_line_style(i, styles[i])
+            self.qtgui_time_sink_audio.set_line_marker(i, markers[i])
+            self.qtgui_time_sink_audio.set_line_alpha(i, alphas[i])
+
+        self._qtgui_time_sink_audio_win = sip.wrapinstance(self.qtgui_time_sink_audio.qwidget(), Qt.QWidget)
+        self.tab_widget_grid_layout_0.addWidget(self._qtgui_time_sink_audio_win, 1, 0, 1, 4)
+        for r in range(1, 2):
+            self.tab_widget_grid_layout_0.setRowStretch(r, 1)
+        for c in range(0, 4):
+            self.tab_widget_grid_layout_0.setColumnStretch(c, 1)
         self._gain_range = qtgui.Range(0, 1, 0.01, 0, 200)
         self._gain_win = qtgui.RangeWidget(self._gain_range, self.set_gain, "Ganancia", "counter_slider", float, QtCore.Qt.Horizontal)
         self.top_grid_layout.addWidget(self._gain_win, 1, 1, 1, 2)
@@ -236,7 +292,11 @@ class transmit_sdr(gr.top_block, Qt.QWidget):
             self.audio_gui_freq_sink_0.set_line_alpha(i, alphas[i])
 
         self._audio_gui_freq_sink_0_win = sip.wrapinstance(self.audio_gui_freq_sink_0.qwidget(), Qt.QWidget)
-        self.tab_widget_layout_1.addWidget(self._audio_gui_freq_sink_0_win)
+        self.tab_widget_grid_layout_1.addWidget(self._audio_gui_freq_sink_0_win, 0, 0, 1, 4)
+        for r in range(0, 1):
+            self.tab_widget_grid_layout_1.setRowStretch(r, 1)
+        for c in range(0, 4):
+            self.tab_widget_grid_layout_1.setColumnStretch(c, 1)
         self.audio_gui_freq_sink = qtgui.freq_sink_f(
             1024, #size
             window.WIN_BLACKMAN_hARRIS, #wintype
@@ -279,7 +339,11 @@ class transmit_sdr(gr.top_block, Qt.QWidget):
             self.audio_gui_freq_sink.set_line_alpha(i, alphas[i])
 
         self._audio_gui_freq_sink_win = sip.wrapinstance(self.audio_gui_freq_sink.qwidget(), Qt.QWidget)
-        self.tab_widget_layout_0.addWidget(self._audio_gui_freq_sink_win)
+        self.tab_widget_grid_layout_0.addWidget(self._audio_gui_freq_sink_win, 0, 0, 1, 4)
+        for r in range(0, 1):
+            self.tab_widget_grid_layout_0.setRowStretch(r, 1)
+        for c in range(0, 4):
+            self.tab_widget_grid_layout_0.setColumnStretch(c, 1)
         self.analog_nbfm_tx = analog.nbfm_tx(
         	audio_rate=12000,
         	quad_rate=int(fm_rate),
@@ -325,6 +389,7 @@ class transmit_sdr(gr.top_block, Qt.QWidget):
         self.connect((self.analog_nbfm_tx, 0), (self.throttle_fm, 0))
         self.connect((self.audio_rational_resampler, 0), (self.analog_nbfm_tx, 0))
         self.connect((self.audio_rational_resampler, 0), (self.audio_gui_freq_sink, 0))
+        self.connect((self.audio_rational_resampler, 0), (self.qtgui_time_sink_audio, 0))
         self.connect((self.control_volume, 0), (self.audio_rational_resampler, 0))
         self.connect((self.fm_rational_resampler, 0), (self.throttle_sdr_gui, 0))
         self.connect((self.throttle_fm, 0), (self.audio_gui_freq_sink_0, 0))
