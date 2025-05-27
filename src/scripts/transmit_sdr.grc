@@ -28,7 +28,7 @@ options:
     bus_sink: false
     bus_source: false
     bus_structure: null
-    coordinate: [16, 8.0]
+    coordinate: [32, 8.0]
     rotation: 0
     state: enabled
 
@@ -60,7 +60,7 @@ blocks:
     bus_sink: false
     bus_source: false
     bus_structure: null
-    coordinate: [1056, 12.0]
+    coordinate: [864, 272.0]
     rotation: 0
     state: enabled
 - name: audio_rate
@@ -72,7 +72,7 @@ blocks:
     bus_sink: false
     bus_source: false
     bus_structure: null
-    coordinate: [176, 8.0]
+    coordinate: [160, 16.0]
     rotation: 0
     state: enabled
 - name: fm_rate
@@ -84,7 +84,7 @@ blocks:
     bus_sink: false
     bus_source: false
     bus_structure: null
-    coordinate: [280, 8.0]
+    coordinate: [232, 16.0]
     rotation: 0
     state: enabled
 - name: freq
@@ -109,7 +109,7 @@ blocks:
     bus_sink: false
     bus_source: false
     bus_structure: null
-    coordinate: [536, 12.0]
+    coordinate: [864, 184.0]
     rotation: 0
     state: enabled
 - name: gain
@@ -130,7 +130,7 @@ blocks:
     bus_sink: false
     bus_source: false
     bus_structure: null
-    coordinate: [912, 12.0]
+    coordinate: [984, 284.0]
     rotation: 0
     state: enabled
 - name: max_deviation
@@ -151,7 +151,7 @@ blocks:
     bus_sink: false
     bus_source: false
     bus_structure: null
-    coordinate: [328, 140.0]
+    coordinate: [312, 92.0]
     rotation: 0
     state: enabled
 - name: volume
@@ -159,7 +159,7 @@ blocks:
   parameters:
     comment: ''
     gui_hint: 0,1,1,2
-    label: Volumen
+    label: '"Volumen\nAudio Fuente"'
     min_len: '200'
     orient: QtCore.Qt.Horizontal
     rangeType: float
@@ -172,7 +172,7 @@ blocks:
     bus_sink: false
     bus_source: false
     bus_structure: null
-    coordinate: [792, 12.0]
+    coordinate: [32, 108.0]
     rotation: 0
     state: enabled
 - name: wav_path
@@ -184,7 +184,7 @@ blocks:
     bus_sink: false
     bus_source: false
     bus_structure: null
-    coordinate: [16, 124.0]
+    coordinate: [32, 200.0]
     rotation: 0
     state: enabled
 - name: analog_nbfm_rx
@@ -203,9 +203,9 @@ blocks:
     bus_sink: false
     bus_source: false
     bus_structure: null
-    coordinate: [1080, 524.0]
+    coordinate: [856, 424.0]
     rotation: 0
-    state: enabled
+    state: disabled
 - name: analog_nbfm_tx
   id: analog_nbfm_tx
   parameters:
@@ -223,7 +223,7 @@ blocks:
     bus_sink: false
     bus_source: false
     bus_structure: null
-    coordinate: [320, 300.0]
+    coordinate: [296, 204.0]
     rotation: 0
     state: enabled
 - name: audio_gui_freq_sink
@@ -261,7 +261,7 @@ blocks:
     fftsize: '1024'
     freqhalf: 'False'
     grid: 'True'
-    gui_hint: tab_widget@0
+    gui_hint: tab_widget@0:[0,0,1,4]
     label: Ganancia Relativa
     label1: '"APT\n(imagen\n en AM)"'
     label10: ''''''
@@ -304,7 +304,7 @@ blocks:
     bus_sink: false
     bus_source: false
     bus_structure: null
-    coordinate: [320, 452.0]
+    coordinate: [296, 320.0]
     rotation: 0
     state: enabled
 - name: audio_gui_freq_sink_0
@@ -342,7 +342,7 @@ blocks:
     fftsize: '1024'
     freqhalf: 'True'
     grid: 'True'
-    gui_hint: tab_widget@1
+    gui_hint: tab_widget@1:[0,0,1,4]
     label: Ganancia Relativa
     label1: "\"Se\xF1al APT\\nmodulada\\nen FM\""
     label10: ''''''
@@ -385,8 +385,8 @@ blocks:
     bus_sink: false
     bus_source: false
     bus_structure: null
-    coordinate: [1056, 308.0]
-    rotation: 0
+    coordinate: [512, 352.0]
+    rotation: 180
     state: enabled
 - name: audio_rational_resampler
   id: rational_resampler_xxx
@@ -405,7 +405,7 @@ blocks:
     bus_sink: false
     bus_source: false
     bus_structure: null
-    coordinate: [72, 372.0]
+    coordinate: [72, 400.0]
     rotation: 0
     state: enabled
 - name: audio_sink
@@ -422,9 +422,9 @@ blocks:
     bus_sink: false
     bus_source: false
     bus_structure: null
-    coordinate: [1264, 548.0]
+    coordinate: [984, 440.0]
     rotation: 0
-    state: enabled
+    state: disabled
 - name: control_volume
   id: blocks_multiply_const_vxx
   parameters:
@@ -440,7 +440,7 @@ blocks:
     bus_sink: false
     bus_source: false
     bus_structure: null
-    coordinate: [72, 300.0]
+    coordinate: [72, 336.0]
     rotation: 180
     state: enabled
 - name: detect_platform
@@ -461,7 +461,7 @@ blocks:
     bus_sink: false
     bus_source: false
     bus_structure: null
-    coordinate: [360, 16.0]
+    coordinate: [336, 24.0]
     rotation: 0
     state: enabled
 - name: fm_rational_resampler
@@ -481,7 +481,7 @@ blocks:
     bus_sink: false
     bus_source: false
     bus_structure: null
-    coordinate: [640, 180.0]
+    coordinate: [520, 152.0]
     rotation: 0
     state: enabled
 - name: freq_sdr
@@ -498,7 +498,104 @@ blocks:
     bus_sink: false
     bus_source: false
     bus_structure: null
-    coordinate: [1248, 188.0]
+    coordinate: [984, 8.0]
+    rotation: 0
+    state: enabled
+- name: qtgui_time_sink_audio
+  id: qtgui_time_sink_x
+  parameters:
+    affinity: ''
+    alias: ''
+    alpha1: '1.0'
+    alpha10: '1.0'
+    alpha2: '1.0'
+    alpha3: '1.0'
+    alpha4: '1.0'
+    alpha5: '1.0'
+    alpha6: '1.0'
+    alpha7: '1.0'
+    alpha8: '1.0'
+    alpha9: '1.0'
+    autoscale: 'False'
+    axislabels: 'True'
+    color1: blue
+    color10: dark blue
+    color2: green
+    color3: green
+    color4: black
+    color5: cyan
+    color6: magenta
+    color7: yellow
+    color8: dark red
+    color9: dark green
+    comment: ''
+    ctrlpanel: 'True'
+    entags: 'False'
+    grid: 'True'
+    gui_hint: tab_widget@0:[1,0,1,4]
+    label1: '"Audio APT\ngenerado"'
+    label10: Signal 10
+    label2: ''
+    label3: Signal 3
+    label4: Signal 4
+    label5: Signal 5
+    label6: Signal 6
+    label7: Signal 7
+    label8: Signal 8
+    label9: Signal 9
+    legend: 'True'
+    marker1: '-1'
+    marker10: '-1'
+    marker2: '-1'
+    marker3: '-1'
+    marker4: '-1'
+    marker5: '-1'
+    marker6: '-1'
+    marker7: '-1'
+    marker8: '-1'
+    marker9: '-1'
+    name: '""'
+    nconnections: '1'
+    size: '512'
+    srate: '12000'
+    stemplot: 'False'
+    style1: '1'
+    style10: '1'
+    style2: '1'
+    style3: '1'
+    style4: '1'
+    style5: '1'
+    style6: '1'
+    style7: '1'
+    style8: '1'
+    style9: '1'
+    tr_chan: '0'
+    tr_delay: '0'
+    tr_level: '0.0'
+    tr_mode: qtgui.TRIG_MODE_AUTO
+    tr_slope: qtgui.TRIG_SLOPE_POS
+    tr_tag: '""'
+    type: float
+    update_time: '0.10'
+    width1: '1'
+    width10: '1'
+    width2: '1'
+    width3: '1'
+    width4: '1'
+    width5: '1'
+    width6: '1'
+    width7: '1'
+    width8: '1'
+    width9: '1'
+    ylabel: Amplitud
+    ymax: '1'
+    ymin: '-1'
+    yunit: '""'
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [296, 408.0]
     rotation: 0
     state: enabled
 - name: samp_rate_sdr
@@ -515,7 +612,7 @@ blocks:
     bus_sink: false
     bus_source: false
     bus_structure: null
-    coordinate: [1248, 316.0]
+    coordinate: [864, 80.0]
     rotation: 0
     state: enabled
 - name: sdr_gui_freq_sink
@@ -553,7 +650,7 @@ blocks:
     fftsize: '1024'
     freqhalf: 'True'
     grid: 'True'
-    gui_hint: tab_widget@2
+    gui_hint: tab_widget@2:[0,0,1,4]
     label: Ganancia Relativa
     label1: "\"Se\xF1al APT \\nmodulada\\nen FM\""
     label10: ''''''
@@ -596,7 +693,7 @@ blocks:
     bus_sink: false
     bus_source: false
     bus_structure: null
-    coordinate: [1056, 180.0]
+    coordinate: [512, 8.0]
     rotation: 0
     state: enabled
 - name: soapy_bladerf_sink_0
@@ -616,7 +713,7 @@ blocks:
     bus_sink: false
     bus_source: false
     bus_structure: null
-    coordinate: [640, 452.0]
+    coordinate: [728, 196.0]
     rotation: 0
     state: disabled
 - name: soapy_hackrf_sink
@@ -636,7 +733,7 @@ blocks:
     bus_sink: false
     bus_source: false
     bus_structure: null
-    coordinate: [640, 372.0]
+    coordinate: [728, 116.0]
     rotation: 0
     state: disabled
 - name: soapy_limesdr_sink_0
@@ -656,7 +753,7 @@ blocks:
     bus_sink: false
     bus_source: false
     bus_structure: null
-    coordinate: [640, 532.0]
+    coordinate: [728, 276.0]
     rotation: 0
     state: disabled
 - name: soapy_plutosdr_sink_0
@@ -675,7 +772,7 @@ blocks:
     bus_sink: false
     bus_source: false
     bus_structure: null
-    coordinate: [640, 612.0]
+    coordinate: [728, 356.0]
     rotation: 0
     state: disabled
 - name: tab_widget
@@ -683,7 +780,7 @@ blocks:
   parameters:
     alias: ''
     comment: ''
-    gui_hint: 2,0,5,4
+    gui_hint: 2,0,4,4
     label0: APT generado
     label1: APT Modulado en FM
     label10: Tab 10
@@ -709,7 +806,7 @@ blocks:
     bus_sink: false
     bus_source: false
     bus_structure: null
-    coordinate: [320, 596.0]
+    coordinate: [160, 96.0]
     rotation: 0
     state: enabled
 - name: throttle_fm
@@ -730,7 +827,7 @@ blocks:
     bus_sink: false
     bus_source: false
     bus_structure: null
-    coordinate: [864, 324.0]
+    coordinate: [536, 292.0]
     rotation: 0
     state: enabled
 - name: throttle_sdr_gui
@@ -751,8 +848,8 @@ blocks:
     bus_sink: false
     bus_source: false
     bus_structure: null
-    coordinate: [856, 196.0]
-    rotation: 0
+    coordinate: [536, 92.0]
+    rotation: 180
     state: enabled
 - name: uhd_usrp_sink_0
   id: uhd_usrp_sink
@@ -1028,7 +1125,7 @@ blocks:
     bus_sink: false
     bus_source: false
     bus_structure: null
-    coordinate: [640, 692.0]
+    coordinate: [728, 8.0]
     rotation: 0
     state: disabled
 - name: virtual_SDR_Rx
@@ -1041,9 +1138,9 @@ blocks:
     bus_sink: false
     bus_source: false
     bus_structure: null
-    coordinate: [888, 548.0]
+    coordinate: [728, 440.0]
     rotation: 0
-    state: enabled
+    state: disabled
 - name: virtual_SDR_Tx
   id: virtual_sink
   parameters:
@@ -1054,7 +1151,7 @@ blocks:
     bus_sink: false
     bus_source: false
     bus_structure: null
-    coordinate: [640, 292.0]
+    coordinate: [528, 440.0]
     rotation: 0
     state: enabled
 - name: wavfile
@@ -1071,7 +1168,7 @@ blocks:
     bus_sink: false
     bus_source: false
     bus_structure: null
-    coordinate: [1248, 60.0]
+    coordinate: [864, 8.0]
     rotation: 0
     state: enabled
 - name: wavfile_source
@@ -1089,24 +1186,25 @@ blocks:
     bus_sink: false
     bus_source: false
     bus_structure: null
-    coordinate: [72, 212.0]
+    coordinate: [72, 268.0]
     rotation: 0
     state: enabled
 
 connections:
 - [analog_nbfm_rx, '0', audio_sink, '0']
 - [analog_nbfm_tx, '0', fm_rational_resampler, '0']
-- [analog_nbfm_tx, '0', soapy_bladerf_sink_0, '0']
-- [analog_nbfm_tx, '0', soapy_hackrf_sink, '0']
-- [analog_nbfm_tx, '0', soapy_limesdr_sink_0, '0']
-- [analog_nbfm_tx, '0', soapy_plutosdr_sink_0, '0']
 - [analog_nbfm_tx, '0', throttle_fm, '0']
-- [analog_nbfm_tx, '0', uhd_usrp_sink_0, '0']
 - [analog_nbfm_tx, '0', virtual_SDR_Tx, '0']
 - [audio_rational_resampler, '0', analog_nbfm_tx, '0']
 - [audio_rational_resampler, '0', audio_gui_freq_sink, '0']
+- [audio_rational_resampler, '0', qtgui_time_sink_audio, '0']
 - [control_volume, '0', audio_rational_resampler, '0']
+- [fm_rational_resampler, '0', soapy_bladerf_sink_0, '0']
+- [fm_rational_resampler, '0', soapy_hackrf_sink, '0']
+- [fm_rational_resampler, '0', soapy_limesdr_sink_0, '0']
+- [fm_rational_resampler, '0', soapy_plutosdr_sink_0, '0']
 - [fm_rational_resampler, '0', throttle_sdr_gui, '0']
+- [fm_rational_resampler, '0', uhd_usrp_sink_0, '0']
 - [throttle_fm, '0', audio_gui_freq_sink_0, '0']
 - [throttle_sdr_gui, '0', sdr_gui_freq_sink, '0']
 - [virtual_SDR_Rx, '0', analog_nbfm_rx, '0']
