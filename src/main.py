@@ -399,7 +399,8 @@ class MainApp:
             img_display_ref.src = PLACEHOLDER_IMG_A_COLOR if img_tag == "A" else PLACEHOLDER_IMG_B_COLOR
         elif url_val.startswith(("http://", "https://")):
             self.status_bar_text.value = f"Descargando Imagen {img_tag} desde URL..."
-            img_display_ref.src = "https://fakeimg.pl/300x200/cccccc/909090?text=Descargando..." # Placeholder de descarga
+            # img_display_ref.src = "https://fakeimg.pl/300x200/cccccc/909090?text=Descargando..." # Placeholder de descarga
+            img_display_ref.src = "DESCARGANDO.png" # Placeholder de descarga
             txt_url_ref.error_text = None
             self.page.update()
             try:
