@@ -16,13 +16,20 @@ APP_FILES_DIR_NAME = "APT-Tx_Files" # Carpeta para guardar archivos generados
 SCRIPTS_DIR_NAME = "scripts" # Carpeta para los scripts de GNU Radio
 
 # --- Placeholders de Imágenes ---
-PLACEHOLDER_IMG_A_COLOR = "https://fakeimg.pl/600x400/1e88e5/ffffff?text=Imagen+A+Original&font=noto&font_size=30"
-PLACEHOLDER_IMG_B_COLOR = "https://fakeimg.pl/600x400/43a047/ffffff?text=Imagen+B+Original&font=noto&font_size=30"
-PLACEHOLDER_PREPROCESSED_A_PENDING = "https://fakeimg.pl/600x400/757575/ffffff?text=Preprocesar+A&font=noto&font_size=25"
-PLACEHOLDER_PREPROCESSED_B_PENDING = "https://fakeimg.pl/600x400/757575/ffffff?text=Preprocesar+B&font=noto&font_size=25"
-PLACEHOLDER_PREPROCESSED_DONE = "https://fakeimg.pl/600x400/ffb300/000000?text=Preprocesado&font=noto&font_size=30" # Genérico
-PLACEHOLDER_APT_PENDING = "https://fakeimg.pl/600x400/757575/ffffff?text=APT+Pendiente&font=noto&font_size=30"
-PLACEHOLDER_APT_GENERATED_SIM = "https://fakeimg.pl/600x400/d81b60/ffffff?text=APT+Generada+(Sim)&font=noto&font_size=30"
+# PLACEHOLDER_IMG_A_COLOR = "https://fakeimg.pl/600x400/1e88e5/ffffff?text=Imagen+A+Original&font=noto&font_size=30"
+PLACEHOLDER_IMG_A_COLOR = "PLACEHOLDER_IMG_A_COLOR.png"
+# PLACEHOLDER_IMG_B_COLOR = "https://fakeimg.pl/600x400/43a047/ffffff?text=Imagen+B+Original&font=noto&font_size=30"
+PLACEHOLDER_IMG_B_COLOR = "PLACEHOLDER_IMG_B_COLOR.png"
+# PLACEHOLDER_PREPROCESSED_A_PENDING = "https://fakeimg.pl/600x400/757575/ffffff?text=Preprocesar+A&font=noto&font_size=25"
+PLACEHOLDER_PREPROCESSED_A_PENDING = "PLACEHOLDER_PREPROCESSED_A_PENDING.png"
+# PLACEHOLDER_PREPROCESSED_B_PENDING = "https://fakeimg.pl/600x400/757575/ffffff?text=Preprocesar+B&font=noto&font_size=25"
+PLACEHOLDER_PREPROCESSED_B_PENDING = "PLACEHOLDER_PREPROCESSED_B_PENDING.png"
+# PLACEHOLDER_PREPROCESSED_DONE = "https://fakeimg.pl/600x400/ffb300/000000?text=Preprocesado&font=noto&font_size=30" # Genérico
+PLACEHOLDER_PREPROCESSED_DONE = "PLACEHOLDER_PREPROCESSED_DONE.png"
+# PLACEHOLDER_APT_PENDING = "https://fakeimg.pl/600x400/757575/ffffff?text=APT+Pendiente&font=noto&font_size=30"
+PLACEHOLDER_APT_PENDING = "PLACEHOLDER_APT_PENDING.png"
+# PLACEHOLDER_APT_GENERATED = "https://fakeimg.pl/600x400/d81b60/ffffff?text=Imagen+APT+Generada&font=noto&font_size=30"
+PLACEHOLDER_APT_GENERATED = "PLACEHOLDER_APT_GENERATED.png"
 # Ejemplo de imagen APT para simulación si se guarda un archivo
 DUMMY_APT_IMAGE_FOR_SIMULATION = "https://upload.wikimedia.org/wikipedia/commons/5/57/NOAA_19_APT_Image.jpg" 
 
