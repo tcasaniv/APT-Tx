@@ -244,13 +244,13 @@ def build_sdr_command(wav_to_transmit_path, selected_script_filename, sdr_option
 
     command_list = [
         interprete_python,
-        "-u", script_full_path,
+        "-u", f"\"{script_full_path}\"",
         "--freq-sdr", str(sdr_options_controls["FREQ_SDR"]),
         "--samp-rate-sdr", str(sdr_options_controls["SAMP_RATE_SDR"])
     ]
 
     if wav_to_transmit_path and os.path.exists(wav_to_transmit_path):
-        command_list.extend(["--wavfile", wav_to_transmit_path])
+        command_list.extend(["--wavfile", f"\"{wav_to_transmit_path}\""])
     else:
         command_list.extend(["--wavfile", 'apt_generated_audio.wav'])
 
