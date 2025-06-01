@@ -1,3 +1,4 @@
+import time
 from PIL import Image as Img
 import numpy as np
 import scipy.signal as sps
@@ -31,6 +32,7 @@ def preprocesar_img_to_APT(ruta_entrada_img:str, ruta_salida_img: str,image_name
     :return ruta de la imagen preprocesada.
     """
     print("|-------- Preprocesar Imagen --------|")
+    start_time = time.perf_counter() # Inicia el cronómetro
     print("Abriendo imagen para preprocesar...")
     # Abrir la imagen
     try:
@@ -49,11 +51,14 @@ def preprocesar_img_to_APT(ruta_entrada_img:str, ruta_salida_img: str,image_name
     # img_reescalada.save(ruta_salida_img_reescalada)
     imagen_gris.save(ruta_salida_img)
     print(f"Imagen {image_name_suffix} preprocesada para formato APT guardada en:\n{ruta_salida_img}\n")
+    end_time = time.perf_counter() # Detiene el cronómetro
+    print(f"Tiempo de preprocesamiento: {end_time - start_time:.4f} segundos\n") # Imprime la duración
 
 
     # Codificar imagen en APT
 def apt_encoder(preproc_a_path:Img, preproc_b_path:Img, output_APT_img_path:str):
     print("|-------- APT Encoder --------|")
+    start_time = time.perf_counter() # Inicia el cronómetro
     print("Abriendo imágenes preprocesadas para codificación APT...")
 
     # Abrir la imagen
@@ -140,6 +145,8 @@ def apt_encoder(preproc_a_path:Img, preproc_b_path:Img, output_APT_img_path:str)
     # Guarda la imagen generada
     imageTx.save(output_APT_img_path)
     print(f"\nImagen APT generada y guardada en:\n{output_APT_img_path}\n")
+    end_time = time.perf_counter() # Detiene el cronómetro
+    print(f"Tiempo de codificación APT: {end_time - start_time:.4f} segundos\n") # Imprime la duración
 
 
 def modulate_APT_img_to_audio(APT_img_path:Img, APT_WAV_path:str, output_sample_rate:int = 11025) -> float:
@@ -147,6 +154,7 @@ def modulate_APT_img_to_audio(APT_img_path:Img, APT_WAV_path:str, output_sample_
     Modula en AM la imagen APT y la guarda como audio WAV a un samplerate de 11025 Hz.
     """
     print("|-------- APT Modulator --------|")
+    start_time = time.perf_counter() # Inicia el cronómetro
 
     # Abrir la imagen
     try:
@@ -166,8 +174,8 @@ def modulate_APT_img_to_audio(APT_img_path:Img, APT_WAV_path:str, output_sample_
     n_samples = int(duration * sample_rate)
     print(f"Configurando portadora: frecuencia=2400Hz, sample_rate={sample_rate}, duración={duration}s, muestras={n_samples}")
 
-    time = np.linspace(0, duration, n_samples)
-    carrier = 1023 * np.sin(2 * np.pi * 2400 * time)
+    time_arr = np.linspace(0, duration, n_samples)
+    carrier = 1023 * np.sin(2 * np.pi * 2400 * time_arr)
     print("Portadora generada.")
 
     # Escala la señal para que coincida con el número de muestra de la portadora
@@ -189,5 +197,7 @@ def modulate_APT_img_to_audio(APT_img_path:Img, APT_WAV_path:str, output_sample_
     modulated_int16 = modulated.astype(np.int16)
     wav.write(APT_WAV_path, output_sample_rate, modulated_int16)
     print(f"\nGuardado audio en:\n{APT_WAV_path}\n")
+    end_time = time.perf_counter() # Detiene el cronómetro
+    print(f"Tiempo de generación de audio APT: {end_time - start_time:.4f} segundos\n") # Imprime la duración
 
     return duration
