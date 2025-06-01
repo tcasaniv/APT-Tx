@@ -52,10 +52,19 @@ def preprocesar_img_to_APT(ruta_entrada_img:str, ruta_salida_img: str,image_name
     imagen_gris.save(ruta_salida_img)
     print(f"Imagen {image_name_suffix} preprocesada para formato APT guardada en:\n{ruta_salida_img}\n")
     end_time = time.perf_counter() # Detiene el cronómetro
-    print(f"Tiempo de preprocesamiento: {end_time - start_time:.4f} segundos\n") # Imprime la duración
+    processing_time = end_time - start_time
+    # Usamos alto_deseado de la función reescalar_img, que se corresponde con imagen_gris.size[1]
+    lines_processed = imagen_gris.size[1] 
+    
+    print(f"Tiempo total de preprocesamiento: {processing_time:.4f} segundos")
+    if processing_time > 0:
+        lines_per_second = lines_processed / processing_time
+        print(f"Rendimiento: {lines_per_second:.2f} líneas procesadas por segundo\n") # Imprime la duración y métrica
+    else:
+        print("Rendimiento: Demasiado rápido para medir o cero líneas procesadas.\n")
+    
 
-
-    # Codificar imagen en APT
+# Codificar imagen en APT
 def apt_encoder(preproc_a_path:Img, preproc_b_path:Img, output_APT_img_path:str):
     print("|-------- APT Encoder --------|")
     start_time = time.perf_counter() # Inicia el cronómetro
@@ -146,7 +155,15 @@ def apt_encoder(preproc_a_path:Img, preproc_b_path:Img, output_APT_img_path:str)
     imageTx.save(output_APT_img_path)
     print(f"\nImagen APT generada y guardada en:\n{output_APT_img_path}\n")
     end_time = time.perf_counter() # Detiene el cronómetro
-    print(f"Tiempo de codificación APT: {end_time - start_time:.4f} segundos\n") # Imprime la duración
+    processing_time = end_time - start_time
+    lines_generated = height_APT_image # La altura de la imagen APT es el número de líneas generadas
+    
+    print(f"Tiempo total de codificación APT: {processing_time:.4f} segundos")
+    if processing_time > 0:
+        lines_per_second = lines_generated / processing_time
+        print(f"Rendimiento: {lines_per_second:.2f} líneas APT generadas por segundo\n")
+    else:
+        print("Rendimiento: Demasiado rápido para medir o cero líneas generadas.\n")
 
 
 def modulate_APT_img_to_audio(APT_img_path:Img, APT_WAV_path:str, output_sample_rate:int = 11025) -> float:
@@ -162,7 +179,7 @@ def modulate_APT_img_to_audio(APT_img_path:Img, APT_WAV_path:str, output_sample_
         APT_image = Img.open(APT_img_path)
     except Exception as e:
         print(f"No se pudo abrir la imagen. Error: {e}")
-        return  # Sal del método si no se puede abrir la imagen
+        return None  # Sal del método si no se puede abrir la imagen
     
     # Aplanar la matriz de píxeles de la imagen a una matriz 1D y normalizarla
     print("Convirtiendo la imagen a un arreglo 1D y normalizando valores a [0,1]")
@@ -188,9 +205,9 @@ def modulate_APT_img_to_audio(APT_img_path:Img, APT_WAV_path:str, output_sample_
     modulated = carrier * signal
 
     # Remuestrea el audio a la velocidad deseada
-    n_samples = int(output_sample_rate * duration)
-    print(f"Remuestreando audio a {output_sample_rate} Hz, muestras finales: {n_samples}")
-    modulated = sps.resample(modulated, n_samples)
+    n_samples_resampled = int(output_sample_rate * duration)
+    print(f"Remuestreando audio a {output_sample_rate} Hz, muestras finales: {n_samples_resampled}")
+    modulated = sps.resample(modulated, n_samples_resampled)
 
     # Guardar el audio como archivo WAV
     print(f"Guardando el audio modulado en: {APT_WAV_path}")
@@ -198,6 +215,15 @@ def modulate_APT_img_to_audio(APT_img_path:Img, APT_WAV_path:str, output_sample_
     wav.write(APT_WAV_path, output_sample_rate, modulated_int16)
     print(f"\nGuardado audio en:\n{APT_WAV_path}\n")
     end_time = time.perf_counter() # Detiene el cronómetro
-    print(f"Tiempo de generación de audio APT: {end_time - start_time:.4f} segundos\n") # Imprime la duración
+    processing_time = end_time - start_time
+    lines_modulated = APT_image.height # La altura de la imagen APT es el número de líneas moduladas
+    
+    print(f"Tiempo total de generación de audio APT: {processing_time:.4f} segundos")
+    if processing_time > 0:
+        lines_per_second = lines_modulated / processing_time
+        print(f"Rendimiento: {lines_per_second:.2f} líneas de imagen APT moduladas por segundo")
+        print(f"Lo que equivale a {duration/processing_time:.2f} segundos de audio por segundo de procesamiento\n")
+    else:
+        print("Rendimiento: Demasiado rápido para medir o cero líneas moduladas.\n")
 
     return duration
