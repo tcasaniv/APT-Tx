@@ -157,7 +157,6 @@ def apt_encoding_img(page: ft.Page, status_label, apt_image_display,
 
     status_label.value = "Codificando imágenes a formato APT..."
     page.update()
-    time.sleep(2)
 
     output_filename = f"apt_encoded_image_{int(time.time())}.png"
     generated_file_path = os.path.join(get_app_files_dir(), output_filename)
@@ -278,12 +277,10 @@ def sdr_transmission(page: ft.Page, status_label, command_label_ref, wav_to_tran
     if command_label_ref:
         command_label_ref.value = f"Ejecutando:\n{command_str_for_execution}"
         page.update() 
-        time.sleep(0.05) # Pequeña pausa para que Flet actualice UI
     print(f"Ejecutando: {command_str_for_execution}")
 
     status_label.value = f"Ejecutando: {selected_script_filename}..."
     page.update()
-    time.sleep(0.1) 
 
     try:
         process = subprocess.Popen(command_list)
