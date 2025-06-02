@@ -158,7 +158,7 @@ def preprocessing_img(page: ft.Page, image_name_suffix: str, status_bar_text_ref
 
 
 def apt_encoding_img(page: ft.Page, status_label, apt_image_display, 
-                     preproc_a_path, preproc_b_path):
+                     preproc_a_path, preproc_b_path, apt_encoded_status_text):
     global generated_apt_image_path
     if not (preproc_a_path and os.path.exists(preproc_a_path)) or \
        not (preproc_b_path and os.path.exists(preproc_b_path)):
@@ -181,6 +181,15 @@ def apt_encoding_img(page: ft.Page, status_label, apt_image_display,
             
             lps_text = f"{metrics['lps']:.2f} LPS" if metrics['lps'] is not None else "N/A LPS"
             time_text = f"{metrics['time']:.2f}s"
+            lines_generated = f"{metrics['lines']:.0f} líneas" if metrics['lines'] is not None else "N/A líneas"
+            apt_encoded_status_text.value = (
+                f"Imagen APT generada: {os.path.basename(metrics['output_path'])}.\n"
+                f"Tiempo total de generación de imagen APT: {time_text}\n"
+                f"Ancho de imagen: 2080 píxeles\n"
+                f"Líneas generadas: {lines_generated}\n"
+                f"Rendimiento: Equivalente a codificar {lps_text} (Líneas Por Segundo)"
+            )
+            apt_encoded_status_text.update()
             status_label.value = (
                 f"Imágenes codificadas a APT en {time_text} ({lps_text}). "
                 f"Guardada como: {os.path.basename(metrics['output_path'])}"
@@ -416,6 +425,8 @@ class MainApp:
         self.preprocessed_a_display.src = PLACEHOLDER_PREPROCESSED_A_PENDING
         self.preprocessed_b_display.src = PLACEHOLDER_PREPROCESSED_B_PENDING
         self.apt_image_display.src = PLACEHOLDER_APT_PENDING
+        self.apt_encoded_status_text.value = "Imagen APT: Aún no generada."
+        self.apt_encoded_status_text.tooltip = None
         self.audio_status_text.value = "Audio APT: Aún no generado."
         self.audio_status_text.tooltip = None # Limpiar tooltip si lo tuviera
         
@@ -531,12 +542,15 @@ class MainApp:
             self.preprocessed_b_display.src = PLACEHOLDER_PREPROCESSED_B_PENDING
         
         self.apt_image_display.src = PLACEHOLDER_APT_PENDING
+        self.apt_encoded_status_text.value = "Imagen APT: Aún no generada."
+        self.apt_encoded_status_text.tooltip = None
         self.audio_status_text.value = "Audio APT: Aún no generado."
         self.audio_status_text.tooltip = None
 
         self.preprocessed_a_display.update()
         self.preprocessed_b_display.update()
         self.apt_image_display.update()
+        self.apt_encoded_status_text.update()
         self.audio_status_text.update()
         self.update_sdr_command_display() # Actualizar comando ya que el WAV se resetea
 
@@ -562,9 +576,12 @@ class MainApp:
             self.status_bar_text.value = "Ambas imágenes preprocesadas exitosamente. Listo para codificar a APT."
             reset_downstream_processing(self.page, "preprocess_changed") # Resetea APT y audio lógicamente
             self.apt_image_display.src = PLACEHOLDER_APT_PENDING # Resetea UI de APT
+            self.apt_encoded_status_text.value = "Imagen APT: Aún no generada."
+            self.apt_encoded_status_text.tooltip = None
             self.audio_status_text.value = "Audio APT: Aún no generado." # Resetea UI de audio
             self.audio_status_text.tooltip = None
             self.apt_image_display.update()
+            self.apt_encoded_status_text.update()
             self.audio_status_text.update()
 
         else:
@@ -582,12 +599,16 @@ class MainApp:
     
     def do_encode_apt_action(self, e):
         encoded_path = apt_encoding_img(self.page, self.status_bar_text, self.apt_image_display,
-                                        preprocessed_a_path_generated, preprocessed_b_path_generated)
+                                        preprocessed_a_path_generated, preprocessed_b_path_generated,
+                                        self.apt_encoded_status_text)
         
         if not encoded_path: # Si falló la codificación
             reset_downstream_processing(self.page, "apt_encode_failed") # Lógica para resetear audio
+            self.apt_encoded_status_text.value = "Imagen APT: Aún no generada."
+            self.apt_encoded_status_text.tooltip = None
             self.audio_status_text.value = "Audio APT: Aún no generado." # UI para audio
             self.audio_status_text.tooltip = None
+            self.apt_encoded_status_text.update()
             self.audio_status_text.update()
 
         self.update_action_buttons_state()
@@ -811,7 +832,8 @@ class MainApp:
 
         self.apt_image_display = ft.Image(width=600, height=200, fit=ft.ImageFit.CONTAIN, border_radius=10, src=PLACEHOLDER_APT_PENDING)
         self.apt_image_clickable = ft.GestureDetector(content=self.apt_image_display, on_tap=lambda e: self.open_image_in_viewer(e, self.apt_image_display))
-        
+
+        self.apt_encoded_status_text = ft.Text("Imagen APT: Aún no generada.",text_align=ft.TextAlign.CENTER,selectable=True)
         self.audio_status_text = ft.Text("Audio APT: Aún no generado.",text_align=ft.TextAlign.CENTER,selectable=True)
 
         self.btn_preprocess = ft.ElevatedButton("1. Preprocesar Imágenes", icon=ft.Icons.IMAGE_SEARCH, on_click=self.do_preprocess_all, disabled=True)
@@ -839,6 +861,7 @@ class MainApp:
                 ft.Divider(height=10),
                 ft.Text("Imagen Codificada APT", size=18, weight=ft.FontWeight.BOLD, text_align=ft.TextAlign.CENTER),
                 ft.Container(content=self.apt_image_clickable, alignment=ft.alignment.center),
+                ft.Container(content=self.apt_encoded_status_text, alignment=ft.alignment.center, padding=10),
                 ft.Divider(height=10),
                 ft.Text("Estado del Audio APT", size=18, weight=ft.FontWeight.BOLD, text_align=ft.TextAlign.CENTER),
                 ft.Container(content=self.audio_status_text, alignment=ft.alignment.center, padding=10),
