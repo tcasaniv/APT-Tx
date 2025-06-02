@@ -861,10 +861,16 @@ class MainApp:
                 ft.Divider(height=10),
                 ft.Text("Imagen Codificada APT", size=18, weight=ft.FontWeight.BOLD, text_align=ft.TextAlign.CENTER),
                 ft.Container(content=self.apt_image_clickable, alignment=ft.alignment.center),
-                ft.Container(content=self.apt_encoded_status_text, alignment=ft.alignment.center, padding=10),
+                ft.Container(content=self.apt_encoded_status_text, alignment=ft.alignment.center, padding=10, 
+                    border=ft.border.all(1, ft.Colors.OUTLINE_VARIANT), 
+                    border_radius=5,
+                    bgcolor=ft.Colors.with_opacity(0.03, ft.Colors.ON_SURFACE)),
                 ft.Divider(height=10),
                 ft.Text("Estado del Audio APT", size=18, weight=ft.FontWeight.BOLD, text_align=ft.TextAlign.CENTER),
-                ft.Container(content=self.audio_status_text, alignment=ft.alignment.center, padding=10),
+                ft.Container(content=self.audio_status_text, alignment=ft.alignment.center, padding=10, 
+                    border=ft.border.all(1, ft.Colors.OUTLINE_VARIANT), 
+                    border_radius=5,
+                    bgcolor=ft.Colors.with_opacity(0.03, ft.Colors.ON_SURFACE)),
                 ft.Row([
                     self.btn_play_audio, 
                     btn_open_output_folder
