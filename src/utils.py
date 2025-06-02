@@ -1,3 +1,4 @@
+import time
 from PIL import Image as Img
 import numpy as np
 import scipy.signal as sps
@@ -23,21 +24,24 @@ def convertir_img_a_grises(PIL_img:Img, image_name_suffix:str = "") -> Img:
     return imagen_gris
 
 
-def preprocesar_img_to_APT(ruta_entrada_img:str, ruta_salida_img: str,image_name_suffix:str = "") -> str:
+def preprocesar_img_to_APT(ruta_entrada_img:str, ruta_salida_img: str,image_name_suffix:str = "") -> dict or None:
     """
     Convierte una imagen al formato y tamaño adecuado para transmisión APT.
 
     :param ruta_entrada_img: Ruta de la imagen a preparar para transmitir por APT.
-    :return ruta de la imagen preprocesada.
+    :param ruta_salida_img: Ruta donde se guardará la imagen preprocesada.
+    :param image_name_suffix: Sufijo para identificar la imagen (A o B).
+    :return: Un diccionario con "output_path", "time", "lps", "lines" si éxito, None si error.
     """
     print("|-------- Preprocesar Imagen --------|")
+    start_time = time.perf_counter() # Inicia el cronómetro
     print("Abriendo imagen para preprocesar...")
     # Abrir la imagen
     try:
         imagen = Img.open(ruta_entrada_img)
     except Exception as e:
         print(f"No se pudo abrir la imagen. Error: {e}")
-        return  # Sal del método si no se puede abrir la imagen
+        return None  # Sal del método si no se puede abrir la imagen
     
     print(f"Imagen:\n{ruta_entrada_img}\n")
 
@@ -49,11 +53,40 @@ def preprocesar_img_to_APT(ruta_entrada_img:str, ruta_salida_img: str,image_name
     # img_reescalada.save(ruta_salida_img_reescalada)
     imagen_gris.save(ruta_salida_img)
     print(f"Imagen {image_name_suffix} preprocesada para formato APT guardada en:\n{ruta_salida_img}\n")
+    end_time = time.perf_counter() # Detiene el cronómetro
+    processing_time = end_time - start_time
+    # Usamos alto_deseado de la función reescalar_img, que se corresponde con imagen_gris.size[1]
+    lines_processed = imagen_gris.size[1] 
+    
+    lines_per_second = None
+    print(f"Tiempo total de preprocesamiento: {processing_time:.4f} segundos")
+    if processing_time > 0:
+        lines_per_second = lines_processed / processing_time
+        print(f"Total de líneas preprocesadas: {lines_processed}\n")
+        print(f"Rendimiento: Equivalente a {lines_per_second:.2f} líneas preprocesadas por segundo\n")
+    else:
+        print("Rendimiento: Demasiado rápido para medir o cero líneas preprocesadas.\n")
+    
+    return {
+        "output_path": ruta_salida_img,
+        "time": processing_time,
+        "lps": lines_per_second,
+        "lines": lines_processed
+    }
 
 
-    # Codificar imagen en APT
-def apt_encoder(preproc_a_path:Img, preproc_b_path:Img, output_APT_img_path:str):
+# Codificar imagen en APT
+def apt_encoder(preproc_a_path:str, preproc_b_path:str, output_APT_img_path:str) -> dict or None:
+    """
+    Codifica dos imágenes preprocesadas en una imagen APT.
+
+    :param preproc_a_path: Ruta de la imagen A preprocesada.
+    :param preproc_b_path: Ruta de la imagen B preprocesada.
+    :param output_APT_img_path: Ruta donde se guardará la imagen APT generada.
+    :return: Un diccionario con "output_path", "time", "lps", "lines" si éxito, None si error.
+    """
     print("|-------- APT Encoder --------|")
+    start_time = time.perf_counter() # Inicia el cronómetro
     print("Abriendo imágenes preprocesadas para codificación APT...")
 
     # Abrir la imagen
@@ -64,7 +97,7 @@ def apt_encoder(preproc_a_path:Img, preproc_b_path:Img, output_APT_img_path:str)
         print(f"Imagen B cargada: {preproc_b_path} tamaño: {PIL_imgB.size}")
     except Exception as e:
         print(f"No se pudo abrir las imágenes. Error: {e}")
-        return  # Sal del método si no se puede abrir las imágenes
+        return None
 
     # Convertir la imagen en una matriz de 256 niveles de cada línea de píxeles, es decir, una matriz 2D de array[row][col].
     print("Convirtiendo imágenes a matrices numpy...")
@@ -140,13 +173,38 @@ def apt_encoder(preproc_a_path:Img, preproc_b_path:Img, output_APT_img_path:str)
     # Guarda la imagen generada
     imageTx.save(output_APT_img_path)
     print(f"\nImagen APT generada y guardada en:\n{output_APT_img_path}\n")
+    end_time = time.perf_counter() # Detiene el cronómetro
+    processing_time = end_time - start_time
+    lines_generated = height_APT_image # La altura de la imagen APT es el número de líneas generadas
+    
+    lines_per_second = None
+    print(f"Tiempo total de codificación APT: {processing_time:.4f} segundos")
+    if processing_time > 0:
+        lines_per_second = lines_generated / processing_time
+        print(f"Total de líneas codificadas en APT: {lines_generated}\n")
+        print(f"Rendimiento: Equivalente a {lines_per_second:.2f} líneas APT generadas por segundo\n")
+    else:
+        print("Rendimiento: Demasiado rápido para medir o cero líneas generadas.\n")
+    
+    return {
+        "output_path": output_APT_img_path,
+        "time": processing_time,
+        "lps": lines_per_second,
+        "lines": lines_generated
+    }
 
 
-def modulate_APT_img_to_audio(APT_img_path:Img, APT_WAV_path:str, output_sample_rate:int = 11025) -> float:
+def modulate_APT_img_to_audio(APT_img_path:str, APT_WAV_path:str, output_sample_rate:int = 11025) -> dict or None:
     """
-    Modula en AM la imagen APT y la guarda como audio WAV a un samplerate de 11025 Hz.
+    Modula en AM la imagen APT y la guarda como audio WAV.
+
+    :param APT_img_path: Ruta de la imagen APT a modular.
+    :param APT_WAV_path: Ruta donde se guardará el archivo WAV generado.
+    :param output_sample_rate: Tasa de muestreo del archivo WAV de salida.
+    :return: Un diccionario con "output_path", "duration", "time", "lps" (líneas de imagen procesadas por seg), "audio_perf_ratio" si éxito, None si error.
     """
     print("|-------- APT Modulator --------|")
+    start_time = time.perf_counter() # Inicia el cronómetro
 
     # Abrir la imagen
     try:
@@ -154,40 +212,79 @@ def modulate_APT_img_to_audio(APT_img_path:Img, APT_WAV_path:str, output_sample_
         APT_image = Img.open(APT_img_path)
     except Exception as e:
         print(f"No se pudo abrir la imagen. Error: {e}")
-        return  # Sal del método si no se puede abrir la imagen
+        return None
     
     # Aplanar la matriz de píxeles de la imagen a una matriz 1D y normalizarla
     print("Convirtiendo la imagen a un arreglo 1D y normalizando valores a [0,1]")
     image_pixels = np.asarray(APT_image).flatten() / 255
 
     # Generar una onda portadora a 2400 Hz
-    sample_rate = 2080 * 20
-    duration = 0.5 * APT_image.height
-    n_samples = int(duration * sample_rate)
-    print(f"Configurando portadora: frecuencia=2400Hz, sample_rate={sample_rate}, duración={duration}s, muestras={n_samples}")
+    sample_rate = 2080 * 20 # Tasa de muestreo interna alta para la modulación
+    duration_audio = 0.5 * APT_image.height # Duración del audio en segundos (0.5 segundos por línea de imagen)
+    n_samples = int(duration_audio * sample_rate)
+    print(f"Configurando portadora: frecuencia=2400Hz, sample_rate={sample_rate}, duración={duration_audio}s, muestras={n_samples}")
 
-    time = np.linspace(0, duration, n_samples)
-    carrier = 1023 * np.sin(2 * np.pi * 2400 * time)
+    time_arr = np.linspace(0, duration_audio, n_samples, endpoint=False)
+    carrier = 1023 * np.sin(2 * np.pi * 2400 * time_arr)
     print("Portadora generada.")
 
     # Escala la señal para que coincida con el número de muestra de la portadora
-    scale = n_samples // len(image_pixels)
-    print(f"Repitiendo cada valor de pixel {scale} veces para igualar la longitud de la portadora")
+    # Cada pixel de la imagen (flattened) se mantiene durante 'scale' muestras de la portadora.
+    # El número total de píxeles en la imagen es APT_image.width * APT_image.height
+    # La señal 'image_pixels' ya está aplanada.
+    num_image_samples = len(image_pixels)
+    scale = n_samples // num_image_samples
+    if n_samples % num_image_samples != 0: # Asegurar que se cubren todas las muestras
+        print(f"Ajustando longitud de señal para que coincida con n_samples. Escala: {scale}")
+    
+    # Repetir cada valor de pixel 'scale' veces.
+    # Si la longitud total no coincide exactamente con n_samples, puede haber un pequeño truncamiento o padding.
     signal = np.repeat(image_pixels, scale)
+    
+    # Ajustar longitud de 'signal' para que coincida con 'carrier' (n_samples)
+    if len(signal) < n_samples:
+        padding = np.zeros(n_samples - len(signal)) # Pad con ceros (silencio) si es más corto
+        signal = np.concatenate((signal, padding))
+    elif len(signal) > n_samples:
+        signal = signal[:n_samples] # Truncar si es más largo
 
+    print(f"Repitiendo cada valor de pixel {scale} veces. Longitud de señal: {len(signal)}, Longitud de portadora: {len(carrier)}")
+    
     # Modula en amplitud la portadora con la señal de 256 niveles.
     print("Modulando en amplitud la portadora con la señal de la imagen.")
     modulated = carrier * signal
 
     # Remuestrea el audio a la velocidad deseada
-    n_samples = int(output_sample_rate * duration)
-    print(f"Remuestreando audio a {output_sample_rate} Hz, muestras finales: {n_samples}")
-    modulated = sps.resample(modulated, n_samples)
+    n_samples_resampled = int(output_sample_rate * duration_audio)
+    print(f"Remuestreando audio a {output_sample_rate} Hz, muestras finales: {n_samples_resampled}")
+    modulated = sps.resample(modulated, n_samples_resampled)
 
     # Guardar el audio como archivo WAV
     print(f"Guardando el audio modulado en: {APT_WAV_path}")
     modulated_int16 = modulated.astype(np.int16)
     wav.write(APT_WAV_path, output_sample_rate, modulated_int16)
     print(f"\nGuardado audio en:\n{APT_WAV_path}\n")
+    
+    end_time = time.perf_counter() # Detiene el cronómetro
+    processing_time = end_time - start_time
+    lines_modulated = APT_image.height
+    
+    lines_per_second = None
+    audio_perf_ratio = None # Segundos de audio generados por segundo de procesamiento
 
-    return duration
+    print(f"Tiempo total de generación de audio APT: {processing_time:.4f} segundos")
+    if processing_time > 0:
+        lines_per_second = lines_modulated / processing_time
+        audio_perf_ratio = duration_audio / processing_time
+        print(f"Rendimiento: {lines_per_second:.2f} líneas de imagen APT moduladas por segundo")
+        print(f"Ratio de rendimiento de audio: {audio_perf_ratio:.2f}x (segundos de audio / segundo de cómputo)\n")
+    else:
+        print("Rendimiento: Demasiado rápido para medir o cero líneas moduladas.\n")
+
+    return {
+        "output_path": APT_WAV_path,
+        "duration": duration_audio,
+        "time": processing_time,
+        "lps": lines_per_second, # Líneas de imagen por segundo de procesamiento
+        "audio_perf_ratio": audio_perf_ratio
+    }

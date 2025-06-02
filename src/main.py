@@ -43,7 +43,6 @@ generated_wav_path = None
 
 
 # --- Configuración de Scripts GNU Radio ---
-# Debes crear estos scripts en la carpeta "scripts" o donde corresponda
 scripts_config = {
     "Simulación (sin SDR)": "simulate_sdr.py",
     "Simulación (sin SDR | sin audio)": "simulate_sdr_no_audio.py",
@@ -57,7 +56,7 @@ scripts_config = {
 # --- Funciones de Utilidad ---
 def get_app_base_dir():
     """Obtiene la ruta base de la aplicación (donde está el script principal o el ejecutable)."""
-    if getattr(sys, 'frozen', False): # Si está empaquetado por PyInstaller
+    if getattr(sys, 'frozen', False): 
         return os.path.dirname(sys.executable)
     return os.path.dirname(os.path.abspath(__file__))
 
@@ -104,19 +103,18 @@ def reset_downstream_processing(page: ft.Page, from_step: str):
     global preprocessed_a_path_generated, preprocessed_b_path_generated
     global generated_apt_image_path, generated_wav_path
     
-    # Referencias a controles UI (se deben pasar o hacer accesibles globalmente si es necesario)
-    # Esto es un poco hacky, idealmente estos controles estarían en una clase o serían pasados.
-    # Por ahora, asumimos que se puede acceder a page y sus controles si es necesario,
-    # o mejor, que las funciones de actualización de UI se llamen desde donde están los controles.
-
     if from_step == "source_a_changed" or from_step == "source_all_changed":
         preprocessed_a_path_generated = None
     if from_step == "source_b_changed" or from_step == "source_all_changed":
         preprocessed_b_path_generated = None
     
-    if from_step in ["source_a_changed", "source_b_changed", "source_all_changed", "preprocess_changed"]:
+    if from_step in ["source_a_changed", "source_b_changed", "source_all_changed", "preprocess_changed", "apt_encode_failed", "audio_gen_failed"]:
         generated_apt_image_path = None
         generated_wav_path = None
+    
+    if from_step in ["source_a_changed", "source_b_changed", "source_all_changed", "preprocess_changed", "apt_encode_failed"]:
+         generated_wav_path = None
+
 
 def preprocessing_img(page: ft.Page, image_name_suffix: str, status_bar_text_ref, 
                       preprocessed_image_display_ref, source_image_path_val):
@@ -128,16 +126,29 @@ def preprocessing_img(page: ft.Page, image_name_suffix: str, status_bar_text_ref
     status_bar_text_ref.value = f"Preprocesando Imagen {image_name_suffix}..."
     page.update()
 
-    output_filename = f"preprocessed_img_{image_name_suffix}_{int(time.time())}.png"
-    generated_file_path = os.path.join(get_app_files_dir(), output_filename)
+    output_filename_base = f"preprocessed_img_{image_name_suffix}_{int(time.time())}.png"
+    generated_file_path = os.path.join(get_app_files_dir(), output_filename_base)
 
     try:
-        preprocesar_img_to_APT(source_image_path_val, generated_file_path, image_name_suffix)
-        preprocessed_image_display_ref.src = generated_file_path
-        preprocessed_image_display_ref.update()
-        status_bar_text_ref.value = f"Imagen {image_name_suffix} preprocesada. Guardada como: {output_filename}"
-        page.update()
-        return generated_file_path
+        metrics = preprocesar_img_to_APT(source_image_path_val, generated_file_path, image_name_suffix)
+        if metrics:
+            preprocessed_image_display_ref.src = metrics["output_path"]
+            preprocessed_image_display_ref.update()
+            
+            lps_text = f"{metrics['lps']:.2f} LPS" if metrics['lps'] is not None else "N/A LPS"
+            time_text = f"{metrics['time']:.2f}s"
+            status_bar_text_ref.value = (
+                f"Imagen {image_name_suffix} preprocesada en {time_text} ({lps_text}). "
+                f"Guardada como: {os.path.basename(metrics['output_path'])}"
+            )
+            page.update()
+            return metrics["output_path"]
+        else:
+            status_bar_text_ref.value = f"Error preprocesando Imagen {image_name_suffix}. Ver consola."
+            preprocessed_image_display_ref.src = PLACEHOLDER_PREPROCESSED_A_PENDING if image_name_suffix == "A" else PLACEHOLDER_PREPROCESSED_B_PENDING
+            preprocessed_image_display_ref.update()
+            page.update()
+            return None
     except Exception as e:
         status_bar_text_ref.value = f"Error preprocesando Imagen {image_name_suffix}: {e}"
         preprocessed_image_display_ref.src = PLACEHOLDER_PREPROCESSED_A_PENDING if image_name_suffix == "A" else PLACEHOLDER_PREPROCESSED_B_PENDING
@@ -147,29 +158,52 @@ def preprocessing_img(page: ft.Page, image_name_suffix: str, status_bar_text_ref
 
 
 def apt_encoding_img(page: ft.Page, status_label, apt_image_display, 
-                     preproc_a_path, preproc_b_path):
+                     preproc_a_path, preproc_b_path, apt_encoded_status_text):
     global generated_apt_image_path
     if not (preproc_a_path and os.path.exists(preproc_a_path)) or \
        not (preproc_b_path and os.path.exists(preproc_b_path)):
         status_label.value = "Error: Se necesitan ambas imágenes preprocesadas (archivos locales) para codificar a APT."
         page.update()
+        generated_apt_image_path = None # Asegurar reseteo
         return None
 
     status_label.value = "Codificando imágenes a formato APT..."
     page.update()
-    time.sleep(2)
 
-    output_filename = f"apt_encoded_image_{int(time.time())}.png"
-    generated_file_path = os.path.join(get_app_files_dir(), output_filename)
+    output_filename_base = f"apt_encoded_image_{int(time.time())}.png"
+    generated_file_path = os.path.join(get_app_files_dir(), output_filename_base)
     
     try:
-        apt_encoder(preproc_a_path, preproc_b_path, generated_file_path)
-        apt_image_display.src = generated_file_path # Mostrar la imagen generada
-        apt_image_display.update()
-        status_label.value = f"Imágenes codificadas a APT. Guardada como: {output_filename}"
-        page.update()
-        generated_apt_image_path = generated_file_path
-        return generated_file_path
+        metrics = apt_encoder(preproc_a_path, preproc_b_path, generated_file_path)
+        if metrics:
+            apt_image_display.src = metrics["output_path"] 
+            apt_image_display.update()
+            
+            lps_text = f"{metrics['lps']:.2f} LPS" if metrics['lps'] is not None else "N/A LPS"
+            time_text = f"{metrics['time']:.2f}s"
+            lines_generated = f"{metrics['lines']:.0f} líneas" if metrics['lines'] is not None else "N/A líneas"
+            apt_encoded_status_text.value = (
+                f"Imagen APT generada: {os.path.basename(metrics['output_path'])}.\n"
+                f"Tiempo total de generación de imagen APT: {time_text}\n"
+                f"Ancho de imagen: 2080 píxeles\n"
+                f"Líneas generadas: {lines_generated}\n"
+                f"Rendimiento: Equivalente a codificar {lps_text} (Líneas Por Segundo)"
+            )
+            apt_encoded_status_text.update()
+            status_label.value = (
+                f"Imágenes codificadas a APT en {time_text} ({lps_text}). "
+                f"Guardada como: {os.path.basename(metrics['output_path'])}"
+            )
+            page.update()
+            generated_apt_image_path = metrics["output_path"]
+            return metrics["output_path"]
+        else:
+            status_label.value = f"Error generando imagen APT. Ver consola."
+            apt_image_display.src = PLACEHOLDER_APT_PENDING
+            apt_image_display.update()
+            page.update()
+            generated_apt_image_path = None
+            return None
     except Exception as e:
         status_label.value = f"Error generando imagen APT: {e}"
         apt_image_display.src = PLACEHOLDER_APT_PENDING
@@ -189,19 +223,35 @@ def audio_apt_generation(page: ft.Page, status_label, audio_status_text, apt_img
     status_label.value = "Generando audio APT..."
     page.update()
 
-    output_filename = f"apt_generated_audio_{int(time.time())}.wav"
-    generated_file_path = os.path.join(get_app_files_dir(), output_filename)
+    output_filename_base = f"apt_generated_audio_{int(time.time())}.wav"
+    generated_file_path = os.path.join(get_app_files_dir(), output_filename_base)
 
     try:
-        duration = modulate_APT_img_to_audio(apt_img_path_val, generated_file_path)
-        duration_text = f"{duration} seg"
+        metrics = modulate_APT_img_to_audio(apt_img_path_val, generated_file_path)
+        if metrics:
+            duration_text = f"{metrics['duration']:.2f} seg"
+            time_text = f"{metrics['time']:.2f}s"
+            
+            lps_text = f"{metrics['lps']:.2f} LPS" if metrics['lps'] is not None else "N/A"
+            audio_perf_text = f"{metrics['audio_perf_ratio']:.2f}x" if metrics['audio_perf_ratio'] is not None else "N/A"
 
-        audio_status_text.value = f"Audio APT generado: {output_filename}.\nDuración: {duration_text}"
-        audio_status_text.update()
-        status_label.value = "Audio APT generado."
-        page.update()
-        generated_wav_path = generated_file_path
-        return generated_file_path
+            audio_status_text.value = (
+                f"Audio APT generado: {os.path.basename(metrics['output_path'])}.\n"
+                f"Duración del audio generado: {duration_text}\n\n"
+                f"Tiempo total de generación de audio: {time_text}\n"
+                f"Ratio de rendimiento de generación de audio: {audio_perf_text} (segundos de audio / segundo de cómputo)\n"
+                f"Rendimiento: Equivalente a modular {lps_text} (Líneas Por Segundo)"
+            )
+            audio_status_text.update()
+            status_label.value = f"Audio APT generado en {time_text}."
+            page.update()
+            generated_wav_path = metrics["output_path"]
+            return metrics["output_path"]
+        else:
+            status_label.value = f"Error generando audio APT. Ver consola."
+            page.update()
+            generated_wav_path = None
+            return None
     except Exception as e:
         status_label.value = f"Error generando audio APT: {e}"
         page.update()
@@ -278,12 +328,10 @@ def sdr_transmission(page: ft.Page, status_label, command_label_ref, wav_to_tran
     if command_label_ref:
         command_label_ref.value = f"Ejecutando:\n{command_str_for_execution}"
         page.update() 
-        time.sleep(0.05) # Pequeña pausa para que Flet actualice UI
     print(f"Ejecutando: {command_str_for_execution}")
 
     status_label.value = f"Ejecutando: {selected_script_filename}..."
     page.update()
-    time.sleep(0.1) 
 
     try:
         process = subprocess.Popen(command_list)
@@ -377,7 +425,10 @@ class MainApp:
         self.preprocessed_a_display.src = PLACEHOLDER_PREPROCESSED_A_PENDING
         self.preprocessed_b_display.src = PLACEHOLDER_PREPROCESSED_B_PENDING
         self.apt_image_display.src = PLACEHOLDER_APT_PENDING
+        self.apt_encoded_status_text.value = "Imagen APT: Aún no generada."
+        self.apt_encoded_status_text.tooltip = None
         self.audio_status_text.value = "Audio APT: Aún no generado."
+        self.audio_status_text.tooltip = None # Limpiar tooltip si lo tuviera
         
         if hasattr(self, 'sdr_script_dropdown'): # Si ya se inicializó el dropdown
             self.sdr_script_dropdown.value = list(scripts_config.keys())[0] # Resetear al primero
@@ -491,11 +542,15 @@ class MainApp:
             self.preprocessed_b_display.src = PLACEHOLDER_PREPROCESSED_B_PENDING
         
         self.apt_image_display.src = PLACEHOLDER_APT_PENDING
+        self.apt_encoded_status_text.value = "Imagen APT: Aún no generada."
+        self.apt_encoded_status_text.tooltip = None
         self.audio_status_text.value = "Audio APT: Aún no generado."
-        
+        self.audio_status_text.tooltip = None
+
         self.preprocessed_a_display.update()
         self.preprocessed_b_display.update()
         self.apt_image_display.update()
+        self.apt_encoded_status_text.update()
         self.audio_status_text.update()
         self.update_sdr_command_display() # Actualizar comando ya que el WAV se resetea
 
@@ -518,20 +573,23 @@ class MainApp:
         if temp_preproc_a and temp_preproc_b:
             preprocessed_a_path_generated = temp_preproc_a
             preprocessed_b_path_generated = temp_preproc_b
-            self.status_bar_text.value = "Ambas imágenes preprocesadas."
+            self.status_bar_text.value = "Ambas imágenes preprocesadas exitosamente. Listo para codificar a APT."
             reset_downstream_processing(self.page, "preprocess_changed") # Resetea APT y audio lógicamente
             self.apt_image_display.src = PLACEHOLDER_APT_PENDING # Resetea UI de APT
+            self.apt_encoded_status_text.value = "Imagen APT: Aún no generada."
+            self.apt_encoded_status_text.tooltip = None
             self.audio_status_text.value = "Audio APT: Aún no generado." # Resetea UI de audio
+            self.audio_status_text.tooltip = None
             self.apt_image_display.update()
+            self.apt_encoded_status_text.update()
             self.audio_status_text.update()
 
         else:
-            # Si uno falla, reseteamos ambos para evitar estado inconsistente para el siguiente paso
             preprocessed_a_path_generated = None
             preprocessed_b_path_generated = None
             if not temp_preproc_a: self.preprocessed_a_display.src = PLACEHOLDER_PREPROCESSED_A_PENDING
             if not temp_preproc_b: self.preprocessed_b_display.src = PLACEHOLDER_PREPROCESSED_B_PENDING
-            self.status_bar_text.value = "Error durante el preprocesamiento. Verifique las imágenes fuente."
+            # self.status_bar_text.value = "Error durante el preprocesamiento de una o ambas imágenes."
             reset_downstream_processing(self.page, "preprocess_changed") # Resetea APT y audio lógicamente
             self.reset_downstream_for_image_ui("A") # Esto resetea la UI de APT y audio también
 
@@ -540,12 +598,17 @@ class MainApp:
         self.page.update()
     
     def do_encode_apt_action(self, e):
-        global generated_apt_image_path
-        generated_apt_image_path = apt_encoding_img(self.page, self.status_bar_text, self.apt_image_display,
-                                                    preprocessed_a_path_generated, preprocessed_b_path_generated)
-        if not generated_apt_image_path: # Si falló la codificación
+        encoded_path = apt_encoding_img(self.page, self.status_bar_text, self.apt_image_display,
+                                        preprocessed_a_path_generated, preprocessed_b_path_generated,
+                                        self.apt_encoded_status_text)
+        
+        if not encoded_path: # Si falló la codificación
             reset_downstream_processing(self.page, "apt_encode_failed") # Lógica para resetear audio
+            self.apt_encoded_status_text.value = "Imagen APT: Aún no generada."
+            self.apt_encoded_status_text.tooltip = None
             self.audio_status_text.value = "Audio APT: Aún no generado." # UI para audio
+            self.audio_status_text.tooltip = None
+            self.apt_encoded_status_text.update()
             self.audio_status_text.update()
 
         self.update_action_buttons_state()
@@ -553,9 +616,10 @@ class MainApp:
         self.page.update()
 
     def do_generate_audio_action(self, e):
-        global generated_wav_path
-        generated_wav_path = audio_apt_generation(self.page, self.status_bar_text, self.audio_status_text,
-                                                  generated_apt_image_path)
+        audio_path = audio_apt_generation(self.page, self.status_bar_text, self.audio_status_text,
+                                          generated_apt_image_path)
+        if not audio_path:
+            reset_downstream_processing(self.page, "audio_gen_failed")
         self.update_action_buttons_state()
         self.update_sdr_command_display() 
         self.page.update()
@@ -636,7 +700,7 @@ class MainApp:
         scripts_dir = get_scripts_dir()
         current_wav_path = generated_wav_path
         
-        _, cmd_str_display = build_sdr_command(
+        command_list, cmd_str_display = build_sdr_command(
             current_wav_path, 
             selected_script_filename,
             sdr_options,
@@ -768,7 +832,8 @@ class MainApp:
 
         self.apt_image_display = ft.Image(width=600, height=200, fit=ft.ImageFit.CONTAIN, border_radius=10, src=PLACEHOLDER_APT_PENDING)
         self.apt_image_clickable = ft.GestureDetector(content=self.apt_image_display, on_tap=lambda e: self.open_image_in_viewer(e, self.apt_image_display))
-        
+
+        self.apt_encoded_status_text = ft.Text("Imagen APT: Aún no generada.",text_align=ft.TextAlign.CENTER,selectable=True)
         self.audio_status_text = ft.Text("Audio APT: Aún no generado.",text_align=ft.TextAlign.CENTER,selectable=True)
 
         self.btn_preprocess = ft.ElevatedButton("1. Preprocesar Imágenes", icon=ft.Icons.IMAGE_SEARCH, on_click=self.do_preprocess_all, disabled=True)
@@ -796,9 +861,16 @@ class MainApp:
                 ft.Divider(height=10),
                 ft.Text("Imagen Codificada APT", size=18, weight=ft.FontWeight.BOLD, text_align=ft.TextAlign.CENTER),
                 ft.Container(content=self.apt_image_clickable, alignment=ft.alignment.center),
+                ft.Container(content=self.apt_encoded_status_text, alignment=ft.alignment.center, padding=10, 
+                    border=ft.border.all(1, ft.Colors.OUTLINE_VARIANT), 
+                    border_radius=5,
+                    bgcolor=ft.Colors.with_opacity(0.03, ft.Colors.ON_SURFACE)),
                 ft.Divider(height=10),
                 ft.Text("Estado del Audio APT", size=18, weight=ft.FontWeight.BOLD, text_align=ft.TextAlign.CENTER),
-                ft.Container(content=self.audio_status_text, alignment=ft.alignment.center, padding=10),
+                ft.Container(content=self.audio_status_text, alignment=ft.alignment.center, padding=10, 
+                    border=ft.border.all(1, ft.Colors.OUTLINE_VARIANT), 
+                    border_radius=5,
+                    bgcolor=ft.Colors.with_opacity(0.03, ft.Colors.ON_SURFACE)),
                 ft.Row([
                     self.btn_play_audio, 
                     btn_open_output_folder
@@ -824,7 +896,7 @@ class MainApp:
         
         def slider_samp_rate_sdr_changed(e):
             self.slider_samp_rate_sdr.value=round(self.slider_samp_rate_sdr.value,1)
-            self.text_value_samp_rate_sdr.value = f"{self.slider_samp_rate_sdr.value} MHz"
+            self.text_value_samp_rate_sdr.value = f"{self.slider_samp_rate_sdr.value} MSps" # Cambiado a MSps
             self.update_sdr_command_display()
             self.page.update()
 
@@ -855,7 +927,8 @@ class MainApp:
                     content=self.command_label_text, 
                     padding=10, 
                     border=ft.border.all(1, ft.Colors.OUTLINE_VARIANT), 
-                    border_radius=5
+                    border_radius=5,
+                    bgcolor=ft.Colors.with_opacity(0.03, ft.Colors.ON_SURFACE) # Fondo sutil para el comando
                 ),
                 ft.Divider(height=10),
                 ft.Container(content=self.btn_transmit, alignment=ft.alignment.center),
@@ -879,8 +952,6 @@ class MainApp:
                 expand=True, spacing=0
             )
         )
-        # self.update_action_buttons_state() # Se llama desde reset_all_processing_state_and_ui
-        # self.update_sdr_command_display() # Se llama desde reset_all_processing_state_and_ui
 
 
 # --- Main ---
