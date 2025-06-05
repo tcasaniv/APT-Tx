@@ -124,7 +124,7 @@ blocks:
     start: '0'
     step: '0.01'
     stop: '1'
-    value: '0'
+    value: '0.9'
     widget: counter_slider
   states:
     bus_sink: false
@@ -166,7 +166,7 @@ blocks:
     start: '0'
     step: '1'
     stop: '300'
-    value: '50'
+    value: '100'
     widget: counter_slider
   states:
     bus_sink: false
@@ -607,7 +607,7 @@ blocks:
     label: Frecuencia de muestro TX SDR
     short_id: ''
     type: eng_float
-    value: 8e6
+    value: 1e6
   states:
     bus_sink: false
     bus_source: false
@@ -735,7 +735,7 @@ blocks:
     bus_structure: null
     coordinate: [728, 116.0]
     rotation: 0
-    state: disabled
+    state: enabled
 - name: soapy_limesdr_sink_0
   id: soapy_limesdr_sink
   parameters:
@@ -1181,7 +1181,7 @@ blocks:
     maxoutbuf: '0'
     minoutbuf: '0'
     nchan: '1'
-    repeat: 'True'
+    repeat: 'False'
   states:
     bus_sink: false
     bus_source: false
