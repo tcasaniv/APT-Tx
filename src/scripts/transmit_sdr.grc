@@ -28,7 +28,7 @@ options:
     bus_sink: false
     bus_source: false
     bus_structure: null
-    coordinate: [32, 8.0]
+    coordinate: [8, 8.0]
     rotation: 0
     state: enabled
 
@@ -60,19 +60,7 @@ blocks:
     bus_sink: false
     bus_source: false
     bus_structure: null
-    coordinate: [864, 272.0]
-    rotation: 0
-    state: enabled
-- name: audio_rate
-  id: variable
-  parameters:
-    comment: ''
-    value: '11025'
-  states:
-    bus_sink: false
-    bus_source: false
-    bus_structure: null
-    coordinate: [160, 16.0]
+    coordinate: [1104, 12.0]
     rotation: 0
     state: enabled
 - name: fm_rate
@@ -84,7 +72,7 @@ blocks:
     bus_sink: false
     bus_source: false
     bus_structure: null
-    coordinate: [232, 16.0]
+    coordinate: [448, 8.0]
     rotation: 0
     state: enabled
 - name: freq
@@ -109,7 +97,7 @@ blocks:
     bus_sink: false
     bus_source: false
     bus_structure: null
-    coordinate: [864, 184.0]
+    coordinate: [920, 216.0]
     rotation: 0
     state: enabled
 - name: gain
@@ -130,7 +118,7 @@ blocks:
     bus_sink: false
     bus_source: false
     bus_structure: null
-    coordinate: [984, 284.0]
+    coordinate: [1144, 296.0]
     rotation: 0
     state: enabled
 - name: max_deviation
@@ -151,7 +139,7 @@ blocks:
     bus_sink: false
     bus_source: false
     bus_structure: null
-    coordinate: [312, 92.0]
+    coordinate: [520, 8.0]
     rotation: 0
     state: enabled
 - name: volume
@@ -172,7 +160,7 @@ blocks:
     bus_sink: false
     bus_source: false
     bus_structure: null
-    coordinate: [32, 108.0]
+    coordinate: [8, 120.0]
     rotation: 0
     state: enabled
 - name: wav_path
@@ -184,7 +172,7 @@ blocks:
     bus_sink: false
     bus_source: false
     bus_structure: null
-    coordinate: [32, 200.0]
+    coordinate: [16, 512.0]
     rotation: 0
     state: enabled
 - name: analog_nbfm_rx
@@ -203,7 +191,7 @@ blocks:
     bus_sink: false
     bus_source: false
     bus_structure: null
-    coordinate: [856, 424.0]
+    coordinate: [528, 560.0]
     rotation: 0
     state: disabled
 - name: analog_nbfm_tx
@@ -223,7 +211,7 @@ blocks:
     bus_sink: false
     bus_source: false
     bus_structure: null
-    coordinate: [296, 204.0]
+    coordinate: [264, 216.0]
     rotation: 0
     state: enabled
 - name: audio_gui_freq_sink
@@ -304,7 +292,7 @@ blocks:
     bus_sink: false
     bus_source: false
     bus_structure: null
-    coordinate: [296, 320.0]
+    coordinate: [272, 368.0]
     rotation: 0
     state: enabled
 - name: audio_gui_freq_sink_0
@@ -385,7 +373,7 @@ blocks:
     bus_sink: false
     bus_source: false
     bus_structure: null
-    coordinate: [512, 352.0]
+    coordinate: [504, 368.0]
     rotation: 180
     state: enabled
 - name: audio_rational_resampler
@@ -394,7 +382,7 @@ blocks:
     affinity: ''
     alias: ''
     comment: ''
-    decim: audio_rate
+    decim: '11025'
     fbw: '0'
     interp: '12000'
     maxoutbuf: '0'
@@ -405,7 +393,7 @@ blocks:
     bus_sink: false
     bus_source: false
     bus_structure: null
-    coordinate: [72, 400.0]
+    coordinate: [64, 400.0]
     rotation: 0
     state: enabled
 - name: audio_sink
@@ -422,7 +410,7 @@ blocks:
     bus_sink: false
     bus_source: false
     bus_structure: null
-    coordinate: [984, 440.0]
+    coordinate: [696, 584.0]
     rotation: 0
     state: disabled
 - name: control_volume
@@ -440,7 +428,7 @@ blocks:
     bus_sink: false
     bus_source: false
     bus_structure: null
-    coordinate: [72, 336.0]
+    coordinate: [64, 336.0]
     rotation: 180
     state: enabled
 - name: detect_platform
@@ -461,7 +449,7 @@ blocks:
     bus_sink: false
     bus_source: false
     bus_structure: null
-    coordinate: [336, 24.0]
+    coordinate: [168, 8.0]
     rotation: 0
     state: enabled
 - name: fm_rational_resampler
@@ -481,7 +469,7 @@ blocks:
     bus_sink: false
     bus_source: false
     bus_structure: null
-    coordinate: [520, 152.0]
+    coordinate: [528, 168.0]
     rotation: 0
     state: enabled
 - name: freq_sdr
@@ -498,7 +486,7 @@ blocks:
     bus_sink: false
     bus_source: false
     bus_structure: null
-    coordinate: [984, 8.0]
+    coordinate: [1120, 192.0]
     rotation: 0
     state: enabled
 - name: qtgui_time_sink_audio
@@ -595,7 +583,190 @@ blocks:
     bus_sink: false
     bus_source: false
     bus_structure: null
-    coordinate: [296, 408.0]
+    coordinate: [272, 464.0]
+    rotation: 0
+    state: enabled
+- name: qtgui_waterfall_sink_x_0
+  id: qtgui_waterfall_sink_x
+  parameters:
+    affinity: ''
+    alias: ''
+    alpha1: '1.0'
+    alpha10: '1.0'
+    alpha2: '1.0'
+    alpha3: '1.0'
+    alpha4: '1.0'
+    alpha5: '1.0'
+    alpha6: '1.0'
+    alpha7: '1.0'
+    alpha8: '1.0'
+    alpha9: '1.0'
+    axislabels: 'True'
+    bw: fm_rate
+    color1: '0'
+    color10: '0'
+    color2: '0'
+    color3: '0'
+    color4: '0'
+    color5: '0'
+    color6: '0'
+    color7: '0'
+    color8: '0'
+    color9: '0'
+    comment: ''
+    fc: '0'
+    fftsize: '1024'
+    freqhalf: 'True'
+    grid: 'False'
+    gui_hint: tab_widget@1:[1,0,1,4]
+    int_max: '10'
+    int_min: '-140'
+    label1: ''
+    label10: ''
+    label2: ''
+    label3: ''
+    label4: ''
+    label5: ''
+    label6: ''
+    label7: ''
+    label8: ''
+    label9: ''
+    legend: 'True'
+    maxoutbuf: '0'
+    minoutbuf: '0'
+    name: '""'
+    nconnections: '1'
+    showports: 'False'
+    type: complex
+    update_time: '0.10'
+    wintype: window.WIN_BLACKMAN_hARRIS
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [520, 464.0]
+    rotation: 180
+    state: enabled
+- name: qtgui_waterfall_sink_x_0_0
+  id: qtgui_waterfall_sink_x
+  parameters:
+    affinity: ''
+    alias: ''
+    alpha1: '1.0'
+    alpha10: '1.0'
+    alpha2: '1.0'
+    alpha3: '1.0'
+    alpha4: '1.0'
+    alpha5: '1.0'
+    alpha6: '1.0'
+    alpha7: '1.0'
+    alpha8: '1.0'
+    alpha9: '1.0'
+    axislabels: 'True'
+    bw: samp_rate_sdr
+    color1: '0'
+    color10: '0'
+    color2: '0'
+    color3: '0'
+    color4: '0'
+    color5: '0'
+    color6: '0'
+    color7: '0'
+    color8: '0'
+    color9: '0'
+    comment: ''
+    fc: freq
+    fftsize: '1024'
+    freqhalf: 'True'
+    grid: 'False'
+    gui_hint: tab_widget@2:[1,0,1,4]
+    int_max: '10'
+    int_min: '-140'
+    label1: ''
+    label10: ''
+    label2: ''
+    label3: ''
+    label4: ''
+    label5: ''
+    label6: ''
+    label7: ''
+    label8: ''
+    label9: ''
+    legend: 'True'
+    maxoutbuf: '0'
+    minoutbuf: '0'
+    name: '""'
+    nconnections: '1'
+    showports: 'False'
+    type: complex
+    update_time: '0.10'
+    wintype: window.WIN_BLACKMAN_hARRIS
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [952, 440.0]
+    rotation: 0
+    state: enabled
+- name: qtgui_waterfall_sink_x_1
+  id: qtgui_waterfall_sink_x
+  parameters:
+    affinity: ''
+    alias: ''
+    alpha1: '1.0'
+    alpha10: '1.0'
+    alpha2: '1.0'
+    alpha3: '1.0'
+    alpha4: '1.0'
+    alpha5: '1.0'
+    alpha6: '1.0'
+    alpha7: '1.0'
+    alpha8: '1.0'
+    alpha9: '1.0'
+    axislabels: 'True'
+    bw: '12000'
+    color1: '0'
+    color10: '0'
+    color2: '0'
+    color3: '0'
+    color4: '0'
+    color5: '0'
+    color6: '0'
+    color7: '0'
+    color8: '0'
+    color9: '0'
+    comment: ''
+    fc: '0'
+    fftsize: '1024'
+    freqhalf: 'False'
+    grid: 'False'
+    gui_hint: tab_widget@0:[2,0,2,4]
+    int_max: '10'
+    int_min: '-140'
+    label1: ''
+    label10: ''
+    label2: ''
+    label3: ''
+    label4: ''
+    label5: ''
+    label6: ''
+    label7: ''
+    label8: ''
+    label9: ''
+    legend: 'True'
+    maxoutbuf: '0'
+    minoutbuf: '0'
+    name: '""'
+    nconnections: '1'
+    showports: 'False'
+    type: float
+    update_time: '0.10'
+    wintype: window.WIN_BLACKMAN_hARRIS
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [272, 544.0]
     rotation: 0
     state: enabled
 - name: samp_rate_sdr
@@ -612,7 +783,7 @@ blocks:
     bus_sink: false
     bus_source: false
     bus_structure: null
-    coordinate: [864, 80.0]
+    coordinate: [944, 112.0]
     rotation: 0
     state: enabled
 - name: sdr_gui_freq_sink
@@ -693,7 +864,7 @@ blocks:
     bus_sink: false
     bus_source: false
     bus_structure: null
-    coordinate: [512, 8.0]
+    coordinate: [952, 336.0]
     rotation: 0
     state: enabled
 - name: soapy_bladerf_sink_0
@@ -713,7 +884,7 @@ blocks:
     bus_sink: false
     bus_source: false
     bus_structure: null
-    coordinate: [728, 196.0]
+    coordinate: [768, 200.0]
     rotation: 0
     state: disabled
 - name: soapy_hackrf_sink
@@ -733,9 +904,9 @@ blocks:
     bus_sink: false
     bus_source: false
     bus_structure: null
-    coordinate: [728, 116.0]
+    coordinate: [768, 136.0]
     rotation: 0
-    state: enabled
+    state: disabled
 - name: soapy_limesdr_sink_0
   id: soapy_limesdr_sink
   parameters:
@@ -753,7 +924,7 @@ blocks:
     bus_sink: false
     bus_source: false
     bus_structure: null
-    coordinate: [728, 276.0]
+    coordinate: [768, 264.0]
     rotation: 0
     state: disabled
 - name: soapy_plutosdr_sink_0
@@ -772,7 +943,7 @@ blocks:
     bus_sink: false
     bus_source: false
     bus_structure: null
-    coordinate: [728, 356.0]
+    coordinate: [768, 328.0]
     rotation: 0
     state: disabled
 - name: tab_widget
@@ -806,7 +977,7 @@ blocks:
     bus_sink: false
     bus_source: false
     bus_structure: null
-    coordinate: [160, 96.0]
+    coordinate: [168, 64.0]
     rotation: 0
     state: enabled
 - name: throttle_fm
@@ -827,7 +998,7 @@ blocks:
     bus_sink: false
     bus_source: false
     bus_structure: null
-    coordinate: [536, 292.0]
+    coordinate: [536, 304.0]
     rotation: 0
     state: enabled
 - name: throttle_sdr_gui
@@ -848,8 +1019,8 @@ blocks:
     bus_sink: false
     bus_source: false
     bus_structure: null
-    coordinate: [536, 92.0]
-    rotation: 180
+    coordinate: [792, 408.0]
+    rotation: 0
     state: enabled
 - name: uhd_usrp_sink_0
   id: uhd_usrp_sink
@@ -1125,35 +1296,9 @@ blocks:
     bus_sink: false
     bus_source: false
     bus_structure: null
-    coordinate: [728, 8.0]
+    coordinate: [768, 8.0]
     rotation: 0
     state: disabled
-- name: virtual_SDR_Rx
-  id: virtual_source
-  parameters:
-    alias: ''
-    comment: ''
-    stream_id: virtual_SDR
-  states:
-    bus_sink: false
-    bus_source: false
-    bus_structure: null
-    coordinate: [728, 440.0]
-    rotation: 0
-    state: disabled
-- name: virtual_SDR_Tx
-  id: virtual_sink
-  parameters:
-    alias: ''
-    comment: ''
-    stream_id: virtual_SDR
-  states:
-    bus_sink: false
-    bus_source: false
-    bus_structure: null
-    coordinate: [528, 440.0]
-    rotation: 0
-    state: enabled
 - name: wavfile
   id: parameter
   parameters:
@@ -1168,7 +1313,7 @@ blocks:
     bus_sink: false
     bus_source: false
     bus_structure: null
-    coordinate: [864, 8.0]
+    coordinate: [936, 8.0]
     rotation: 0
     state: enabled
 - name: wavfile_source
@@ -1186,18 +1331,19 @@ blocks:
     bus_sink: false
     bus_source: false
     bus_structure: null
-    coordinate: [72, 268.0]
+    coordinate: [64, 264.0]
     rotation: 0
     state: enabled
 
 connections:
 - [analog_nbfm_rx, '0', audio_sink, '0']
+- [analog_nbfm_tx, '0', analog_nbfm_rx, '0']
 - [analog_nbfm_tx, '0', fm_rational_resampler, '0']
 - [analog_nbfm_tx, '0', throttle_fm, '0']
-- [analog_nbfm_tx, '0', virtual_SDR_Tx, '0']
 - [audio_rational_resampler, '0', analog_nbfm_tx, '0']
 - [audio_rational_resampler, '0', audio_gui_freq_sink, '0']
 - [audio_rational_resampler, '0', qtgui_time_sink_audio, '0']
+- [audio_rational_resampler, '0', qtgui_waterfall_sink_x_1, '0']
 - [control_volume, '0', audio_rational_resampler, '0']
 - [fm_rational_resampler, '0', soapy_bladerf_sink_0, '0']
 - [fm_rational_resampler, '0', soapy_hackrf_sink, '0']
@@ -1206,10 +1352,11 @@ connections:
 - [fm_rational_resampler, '0', throttle_sdr_gui, '0']
 - [fm_rational_resampler, '0', uhd_usrp_sink_0, '0']
 - [throttle_fm, '0', audio_gui_freq_sink_0, '0']
+- [throttle_fm, '0', qtgui_waterfall_sink_x_0, '0']
+- [throttle_sdr_gui, '0', qtgui_waterfall_sink_x_0_0, '0']
 - [throttle_sdr_gui, '0', sdr_gui_freq_sink, '0']
-- [virtual_SDR_Rx, '0', analog_nbfm_rx, '0']
 - [wavfile_source, '0', control_volume, '0']
 
 metadata:
   file_format: 1
-  grc_version: 3.10.12.0
+  grc_version: 3.10.9.2

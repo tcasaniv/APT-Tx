@@ -7,7 +7,7 @@
 # GNU Radio Python Flow Graph
 # Title: Transmisión con bladeRF
 # Author: tcasaniv
-# GNU Radio version: 3.10.12.0
+# GNU Radio version: 3.10.9.2
 
 from PyQt5 import Qt
 from gnuradio import qtgui
@@ -27,14 +27,13 @@ from gnuradio.eng_arg import eng_float, intx
 from gnuradio import eng_notation
 from gnuradio import soapy
 import sip
-import threading
 import transmit_sdr_detect_platform as detect_platform  # embedded python module
 
 
 
 class transmit_sdr(gr.top_block, Qt.QWidget):
 
-    def __init__(self, freq_sdr=928e6, samp_rate_sdr=8e6, wavfile=detect_platform.wav_path):
+    def __init__(self, freq_sdr=928e6, samp_rate_sdr=1e6, wavfile=detect_platform.wav_path):
         gr.top_block.__init__(self, "Transmisión con bladeRF", catch_exceptions=True)
         Qt.QWidget.__init__(self)
         self.setWindowTitle("Transmisión con bladeRF")
@@ -55,7 +54,7 @@ class transmit_sdr(gr.top_block, Qt.QWidget):
         self.top_grid_layout = Qt.QGridLayout()
         self.top_layout.addLayout(self.top_grid_layout)
 
-        self.settings = Qt.QSettings("gnuradio/flowgraphs", "transmit_sdr")
+        self.settings = Qt.QSettings("GNU Radio", "transmit_sdr")
 
         try:
             geometry = self.settings.value("geometry")
@@ -63,7 +62,6 @@ class transmit_sdr(gr.top_block, Qt.QWidget):
                 self.restoreGeometry(geometry)
         except BaseException as exc:
             print(f"Qt GUI: Could not restore geometry: {str(exc)}", file=sys.stderr)
-        self.flowgraph_started = threading.Event()
 
         ##################################################
         # Parameters
@@ -76,19 +74,18 @@ class transmit_sdr(gr.top_block, Qt.QWidget):
         # Variables
         ##################################################
         self.wav_path = wav_path = wavfile
-        self.volume = volume = 50
+        self.volume = volume = 100
         self.max_deviation = max_deviation = 17e3
-        self.gain = gain = 0
+        self.gain = gain = 0.9
         self.freq = freq = freq_sdr
         self.fm_rate = fm_rate = 48e3
-        self.audio_rate = audio_rate = 11025
         self.activate_amp = activate_amp = False
 
         ##################################################
         # Blocks
         ##################################################
 
-        self._volume_range = qtgui.Range(0, 300, 1, 50, 200)
+        self._volume_range = qtgui.Range(0, 300, 1, 100, 200)
         self._volume_win = qtgui.RangeWidget(self._volume_range, self.set_volume, "Volumen\nAudio Fuente", "counter_slider", float, QtCore.Qt.Horizontal)
         self.top_grid_layout.addWidget(self._volume_win, 0, 1, 1, 2)
         for r in range(0, 1):
@@ -123,7 +120,7 @@ class transmit_sdr(gr.top_block, Qt.QWidget):
             self.top_grid_layout.setRowStretch(r, 1)
         for c in range(0, 1):
             self.top_grid_layout.setColumnStretch(c, 1)
-        self._gain_range = qtgui.Range(0, 1, 0.01, 0, 200)
+        self._gain_range = qtgui.Range(0, 1, 0.01, 0.9, 200)
         self._gain_win = qtgui.RangeWidget(self._gain_range, self.set_gain, "Ganancia", "counter_slider", float, QtCore.Qt.Horizontal)
         self.top_grid_layout.addWidget(self._gain_win, 1, 1, 1, 2)
         for r in range(1, 2):
@@ -140,7 +137,7 @@ class transmit_sdr(gr.top_block, Qt.QWidget):
             self.top_grid_layout.setRowStretch(r, 1)
         for c in range(0, 1):
             self.top_grid_layout.setColumnStretch(c, 1)
-        self.wavfile_source = blocks.wavfile_source(wav_path, True)
+        self.wavfile_source = blocks.wavfile_source(wav_path, False)
         self.throttle_sdr_gui = blocks.throttle( gr.sizeof_gr_complex*1, samp_rate_sdr, True, 0 if "auto" == "auto" else max( int(float(0.1) * samp_rate_sdr) if "auto" == "time" else int(0.1), 1) )
         self.throttle_fm = blocks.throttle( gr.sizeof_gr_complex*1, fm_rate, True, 0 if "auto" == "auto" else max( int(float(0.1) * fm_rate) if "auto" == "time" else int(0.1), 1) )
         self.soapy_bladerf_sink_0 = None
@@ -202,6 +199,124 @@ class transmit_sdr(gr.top_block, Qt.QWidget):
             self.tab_widget_grid_layout_2.setRowStretch(r, 1)
         for c in range(0, 4):
             self.tab_widget_grid_layout_2.setColumnStretch(c, 1)
+        self.qtgui_waterfall_sink_x_1 = qtgui.waterfall_sink_f(
+            1024, #size
+            window.WIN_BLACKMAN_hARRIS, #wintype
+            0, #fc
+            12000, #bw
+            "", #name
+            1, #number of inputs
+            None # parent
+        )
+        self.qtgui_waterfall_sink_x_1.set_update_time(0.10)
+        self.qtgui_waterfall_sink_x_1.enable_grid(False)
+        self.qtgui_waterfall_sink_x_1.enable_axis_labels(True)
+
+
+        self.qtgui_waterfall_sink_x_1.set_plot_pos_half(not False)
+
+        labels = ['', '', '', '', '',
+                  '', '', '', '', '']
+        colors = [0, 0, 0, 0, 0,
+                  0, 0, 0, 0, 0]
+        alphas = [1.0, 1.0, 1.0, 1.0, 1.0,
+                  1.0, 1.0, 1.0, 1.0, 1.0]
+
+        for i in range(1):
+            if len(labels[i]) == 0:
+                self.qtgui_waterfall_sink_x_1.set_line_label(i, "Data {0}".format(i))
+            else:
+                self.qtgui_waterfall_sink_x_1.set_line_label(i, labels[i])
+            self.qtgui_waterfall_sink_x_1.set_color_map(i, colors[i])
+            self.qtgui_waterfall_sink_x_1.set_line_alpha(i, alphas[i])
+
+        self.qtgui_waterfall_sink_x_1.set_intensity_range(-140, 10)
+
+        self._qtgui_waterfall_sink_x_1_win = sip.wrapinstance(self.qtgui_waterfall_sink_x_1.qwidget(), Qt.QWidget)
+
+        self.tab_widget_grid_layout_0.addWidget(self._qtgui_waterfall_sink_x_1_win, 2, 0, 2, 4)
+        for r in range(2, 4):
+            self.tab_widget_grid_layout_0.setRowStretch(r, 1)
+        for c in range(0, 4):
+            self.tab_widget_grid_layout_0.setColumnStretch(c, 1)
+        self.qtgui_waterfall_sink_x_0_0 = qtgui.waterfall_sink_c(
+            1024, #size
+            window.WIN_BLACKMAN_hARRIS, #wintype
+            freq, #fc
+            samp_rate_sdr, #bw
+            "", #name
+            1, #number of inputs
+            None # parent
+        )
+        self.qtgui_waterfall_sink_x_0_0.set_update_time(0.10)
+        self.qtgui_waterfall_sink_x_0_0.enable_grid(False)
+        self.qtgui_waterfall_sink_x_0_0.enable_axis_labels(True)
+
+
+
+        labels = ['', '', '', '', '',
+                  '', '', '', '', '']
+        colors = [0, 0, 0, 0, 0,
+                  0, 0, 0, 0, 0]
+        alphas = [1.0, 1.0, 1.0, 1.0, 1.0,
+                  1.0, 1.0, 1.0, 1.0, 1.0]
+
+        for i in range(1):
+            if len(labels[i]) == 0:
+                self.qtgui_waterfall_sink_x_0_0.set_line_label(i, "Data {0}".format(i))
+            else:
+                self.qtgui_waterfall_sink_x_0_0.set_line_label(i, labels[i])
+            self.qtgui_waterfall_sink_x_0_0.set_color_map(i, colors[i])
+            self.qtgui_waterfall_sink_x_0_0.set_line_alpha(i, alphas[i])
+
+        self.qtgui_waterfall_sink_x_0_0.set_intensity_range(-140, 10)
+
+        self._qtgui_waterfall_sink_x_0_0_win = sip.wrapinstance(self.qtgui_waterfall_sink_x_0_0.qwidget(), Qt.QWidget)
+
+        self.tab_widget_grid_layout_2.addWidget(self._qtgui_waterfall_sink_x_0_0_win, 1, 0, 1, 4)
+        for r in range(1, 2):
+            self.tab_widget_grid_layout_2.setRowStretch(r, 1)
+        for c in range(0, 4):
+            self.tab_widget_grid_layout_2.setColumnStretch(c, 1)
+        self.qtgui_waterfall_sink_x_0 = qtgui.waterfall_sink_c(
+            1024, #size
+            window.WIN_BLACKMAN_hARRIS, #wintype
+            0, #fc
+            fm_rate, #bw
+            "", #name
+            1, #number of inputs
+            None # parent
+        )
+        self.qtgui_waterfall_sink_x_0.set_update_time(0.10)
+        self.qtgui_waterfall_sink_x_0.enable_grid(False)
+        self.qtgui_waterfall_sink_x_0.enable_axis_labels(True)
+
+
+
+        labels = ['', '', '', '', '',
+                  '', '', '', '', '']
+        colors = [0, 0, 0, 0, 0,
+                  0, 0, 0, 0, 0]
+        alphas = [1.0, 1.0, 1.0, 1.0, 1.0,
+                  1.0, 1.0, 1.0, 1.0, 1.0]
+
+        for i in range(1):
+            if len(labels[i]) == 0:
+                self.qtgui_waterfall_sink_x_0.set_line_label(i, "Data {0}".format(i))
+            else:
+                self.qtgui_waterfall_sink_x_0.set_line_label(i, labels[i])
+            self.qtgui_waterfall_sink_x_0.set_color_map(i, colors[i])
+            self.qtgui_waterfall_sink_x_0.set_line_alpha(i, alphas[i])
+
+        self.qtgui_waterfall_sink_x_0.set_intensity_range(-140, 10)
+
+        self._qtgui_waterfall_sink_x_0_win = sip.wrapinstance(self.qtgui_waterfall_sink_x_0.qwidget(), Qt.QWidget)
+
+        self.tab_widget_grid_layout_1.addWidget(self._qtgui_waterfall_sink_x_0_win, 1, 0, 1, 4)
+        for r in range(1, 2):
+            self.tab_widget_grid_layout_1.setRowStretch(r, 1)
+        for c in range(0, 4):
+            self.tab_widget_grid_layout_1.setColumnStretch(c, 1)
         self.qtgui_time_sink_audio = qtgui.time_sink_f(
             512, #size
             12000, #samp_rate
@@ -262,7 +377,7 @@ class transmit_sdr(gr.top_block, Qt.QWidget):
         self.control_volume = blocks.multiply_const_ff((volume/100))
         self.audio_rational_resampler = filter.rational_resampler_fff(
                 interpolation=12000,
-                decimation=audio_rate,
+                decimation=11025,
                 taps=[],
                 fractional_bw=0)
         self.audio_gui_freq_sink_0 = qtgui.freq_sink_c(
@@ -404,16 +519,19 @@ class transmit_sdr(gr.top_block, Qt.QWidget):
         self.connect((self.audio_rational_resampler, 0), (self.analog_nbfm_tx, 0))
         self.connect((self.audio_rational_resampler, 0), (self.audio_gui_freq_sink, 0))
         self.connect((self.audio_rational_resampler, 0), (self.qtgui_time_sink_audio, 0))
+        self.connect((self.audio_rational_resampler, 0), (self.qtgui_waterfall_sink_x_1, 0))
         self.connect((self.control_volume, 0), (self.audio_rational_resampler, 0))
         self.connect((self.fm_rational_resampler, 0), (self.soapy_bladerf_sink_0, 0))
         self.connect((self.fm_rational_resampler, 0), (self.throttle_sdr_gui, 0))
         self.connect((self.throttle_fm, 0), (self.audio_gui_freq_sink_0, 0))
+        self.connect((self.throttle_fm, 0), (self.qtgui_waterfall_sink_x_0, 0))
+        self.connect((self.throttle_sdr_gui, 0), (self.qtgui_waterfall_sink_x_0_0, 0))
         self.connect((self.throttle_sdr_gui, 0), (self.sdr_gui_freq_sink, 0))
         self.connect((self.wavfile_source, 0), (self.control_volume, 0))
 
 
     def closeEvent(self, event):
-        self.settings = Qt.QSettings("gnuradio/flowgraphs", "transmit_sdr")
+        self.settings = Qt.QSettings("GNU Radio", "transmit_sdr")
         self.settings.setValue("geometry", self.saveGeometry())
         self.stop()
         self.wait()
@@ -432,6 +550,7 @@ class transmit_sdr(gr.top_block, Qt.QWidget):
 
     def set_samp_rate_sdr(self, samp_rate_sdr):
         self.samp_rate_sdr = samp_rate_sdr
+        self.qtgui_waterfall_sink_x_0_0.set_frequency_range(self.freq, self.samp_rate_sdr)
         self.sdr_gui_freq_sink.set_frequency_range(self.freq, self.samp_rate_sdr)
         self.soapy_bladerf_sink_0.set_sample_rate(0, self.samp_rate_sdr)
         self.throttle_sdr_gui.set_sample_rate(self.samp_rate_sdr)
@@ -475,6 +594,7 @@ class transmit_sdr(gr.top_block, Qt.QWidget):
 
     def set_freq(self, freq):
         self.freq = freq
+        self.qtgui_waterfall_sink_x_0_0.set_frequency_range(self.freq, self.samp_rate_sdr)
         self.sdr_gui_freq_sink.set_frequency_range(self.freq, self.samp_rate_sdr)
         self.soapy_bladerf_sink_0.set_frequency(0, self.freq)
 
@@ -484,13 +604,8 @@ class transmit_sdr(gr.top_block, Qt.QWidget):
     def set_fm_rate(self, fm_rate):
         self.fm_rate = fm_rate
         self.audio_gui_freq_sink_0.set_frequency_range(0, self.fm_rate)
+        self.qtgui_waterfall_sink_x_0.set_frequency_range(0, self.fm_rate)
         self.throttle_fm.set_sample_rate(self.fm_rate)
-
-    def get_audio_rate(self):
-        return self.audio_rate
-
-    def set_audio_rate(self, audio_rate):
-        self.audio_rate = audio_rate
 
     def get_activate_amp(self):
         return self.activate_amp
@@ -507,7 +622,7 @@ def argument_parser():
         "--freq-sdr", dest="freq_sdr", type=eng_float, default=eng_notation.num_to_str(float(928e6)),
         help="Set Frecuencia TX SDR [default=%(default)r]")
     parser.add_argument(
-        "--samp-rate-sdr", dest="samp_rate_sdr", type=eng_float, default=eng_notation.num_to_str(float(8e6)),
+        "--samp-rate-sdr", dest="samp_rate_sdr", type=eng_float, default=eng_notation.num_to_str(float(1e6)),
         help="Set Frecuencia de muestro TX SDR [default=%(default)r]")
     parser.add_argument(
         "--wavfile", dest="wavfile", type=str, default=detect_platform.wav_path,
@@ -524,7 +639,6 @@ def main(top_block_cls=transmit_sdr, options=None):
     tb = top_block_cls(freq_sdr=options.freq_sdr, samp_rate_sdr=options.samp_rate_sdr, wavfile=options.wavfile)
 
     tb.start()
-    tb.flowgraph_started.set()
 
     tb.show()
 
