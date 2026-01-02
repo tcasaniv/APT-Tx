@@ -8,7 +8,7 @@ import requests # Para descargar imágenes desde URL
 import sys # Necesario para sys.executable y sys.frozen
 from utils import apt_encoder, modulate_APT_img_to_audio, preprocesar_img_to_APT
 
-VERSION_APP="v1.0.0"
+VERSION_APP="v1.0.1"
 
 # --- Constantes ---
 APP_NAME = "APT-Tx"
@@ -368,8 +368,7 @@ class MainApp:
             actions=[ft.TextButton("Cerrar", on_click=lambda _: self.close_dialog(dialog))],
             actions_alignment=ft.MainAxisAlignment.END,
         )
-        self.page.dialog = dialog
-        self.page.open(dialog)
+        self.page.show_dialog(dialog)
         self.page.update()
 
     def show_about_apt_dialog(self, e):
@@ -385,7 +384,7 @@ class MainApp:
             title=ft.Text(f"Acerca de {APP_NAME}"),
             content=ft.Column(
                 [
-                    ft.Row([ft.Image(src="icon.png", width=100, height=100, fit=ft.ImageFit.CONTAIN, border_radius=10),
+                    ft.Row([ft.Image(src="icon.png", width=100, height=100, fit=ft.BoxFit.CONTAIN, border_radius=10),
                     ft.Column([ft.Text(f"Versión: {VERSION_APP}"),
                     ft.Text("Aplicación para generar señales de audio APT para transmisión FM con SDR."),
                     ft.Text("Desarrollado con Flet y Python.")])],wrap=True),
@@ -395,8 +394,7 @@ class MainApp:
             actions=[ft.TextButton("Cerrar", on_click=lambda _: self.close_dialog(about_app_dialog))],
             actions_alignment=ft.MainAxisAlignment.END,
         )
-        self.page.dialog = about_app_dialog
-        self.page.open(about_app_dialog)
+        self.page.show_dialog(about_app_dialog)
         self.page.update()
         
     def close_dialog(self, dialog_instance):
@@ -419,8 +417,8 @@ class MainApp:
         self.img_b_display.src = PLACEHOLDER_IMG_B_COLOR
         self.txt_url_a.value = ""
         self.txt_url_b.value = ""
-        self.txt_url_a.error_text = None
-        self.txt_url_b.error_text = None
+        self.txt_url_a.error = None
+        self.txt_url_b.error = None
         
         self.preprocessed_a_display.src = PLACEHOLDER_PREPROCESSED_A_PENDING
         self.preprocessed_b_display.src = PLACEHOLDER_PREPROCESSED_B_PENDING
@@ -501,19 +499,19 @@ class MainApp:
         self.update_action_buttons_state()
         self.page.update()
 
-    def on_file_picked(self, e: ft.FilePickerResultEvent, img_tag):
+    def on_file_picked(self, files, img_tag):
         global image_a_source_path, image_b_source_path
         
         path_to_set = None
         current_img_display = self.img_a_display if img_tag == "A" else self.img_b_display
         txt_url_ref = self.txt_url_a if img_tag == "A" else self.txt_url_b
 
-        if e.files and len(e.files) > 0:
-            path_to_set = e.files[0].path
+        if files and len(files) > 0:
+            path_to_set = files[0].path
             current_img_display.src = path_to_set
             self.status_bar_text.value = f"Imagen {img_tag} seleccionada: {os.path.basename(path_to_set)}"
             txt_url_ref.value = "" 
-            txt_url_ref.error_text = None
+            txt_url_ref.error = None
         else:
             self.status_bar_text.value = f"No se seleccionó archivo para Imagen {img_tag}."
             # No cambiar si ya hay una o si se cancela
@@ -636,12 +634,12 @@ class MainApp:
     
     def open_image_in_viewer(self, e, image_control: ft.Image):
         src_path = image_control.src
-        if src_path and not src_path.startswith("http") and os.path.exists(src_path) and os.path.isfile(src_path):
+        if src_path and isinstance(src_path, str) and not src_path.startswith("http") and os.path.exists(src_path) and os.path.isfile(src_path):
             if open_file_with_default_program(src_path):
                 self.status_bar_text.value = f"Abriendo imagen: {os.path.basename(src_path)}"
             else:
                 self.status_bar_text.value = f"No se pudo abrir la imagen: {os.path.basename(src_path)}. Revise la consola."
-        elif src_path and src_path.startswith("http"):
+        elif src_path and isinstance(src_path, str) and src_path.startswith("http"):
             self.status_bar_text.value = "No se puede abrir una URL directamente. Descárguela primero."
         else:
             self.status_bar_text.value = "No hay imagen local para mostrar o es un placeholder."
@@ -715,7 +713,10 @@ class MainApp:
             final_display_str += "\n(Nota: Archivo WAV no generado aún.)"
         
         self.command_label_text.value = final_display_str
-        if hasattr(self, 'page') and self.page: self.page.update()
+        if hasattr(self, 'command_label_text') and self.command_label_text.page:
+             self.command_label_text.update()
+        elif hasattr(self, 'page') and self.page: 
+             self.page.update()
 
 
     def update_action_buttons_state(self):
@@ -754,8 +755,8 @@ class MainApp:
 
     def setup_ui(self):
         self.page.title = f"{APP_NAME} | Simulador de pases NOAA"
-        self.page.window_width = 1050
-        self.page.window_height = 850 
+        self.page.width = 1050
+        self.page.height = 850 
         self.page.padding = 0
         self.page.vertical_alignment = ft.MainAxisAlignment.START
         self.page.horizontal_alignment = ft.CrossAxisAlignment.CENTER
@@ -766,9 +767,9 @@ class MainApp:
                 self.status_bar_text,
                 ft.Text(VERSION_APP+" | "+platform.system(), size=10,selectable=True)
             ], vertical_alignment=ft.CrossAxisAlignment.CENTER),
-            padding=ft.padding.symmetric(horizontal=10, vertical=5),
+            padding=ft.Padding.symmetric(horizontal=10, vertical=5),
             bgcolor=ft.Colors.with_opacity(0.9, ft.Colors.SURFACE), # Un color sutil
-            border=ft.border.only(top=ft.border.BorderSide(1, ft.Colors.OUTLINE_VARIANT))
+            border=ft.Border.only(top=ft.border.BorderSide(1, ft.Colors.OUTLINE_VARIANT))
         )
 
         app_bar = ft.AppBar(
@@ -778,10 +779,10 @@ class MainApp:
             actions=[
                 ft.PopupMenuButton(
                     items=[
-                        ft.PopupMenuItem(text="Sobre APT", on_click=self.show_about_apt_dialog),
-                        ft.PopupMenuItem(text="Acerca de...", on_click=self.show_about_app_dialog),
+                        ft.PopupMenuItem(content=ft.Text("Sobre APT"), on_click=self.show_about_apt_dialog),
+                        ft.PopupMenuItem(content=ft.Text("Acerca de..."), on_click=self.show_about_app_dialog),
                         ft.PopupMenuItem(), 
-                        ft.PopupMenuItem(text="Resetear Todo", icon=ft.Icons.REFRESH, on_click=self.reset_all_processing_state_and_ui)
+                        ft.PopupMenuItem(content=ft.Text("Resetear Todo"), icon=ft.Icons.REFRESH, on_click=self.reset_all_processing_state_and_ui)
                     ]
                 )
             ]
@@ -789,19 +790,26 @@ class MainApp:
         self.page.appbar = app_bar
 
         # === Pestaña 1: Selección de Imágenes ===
-        self.img_a_display = ft.Image(src=PLACEHOLDER_IMG_A_COLOR, width=350, height=250, fit=ft.ImageFit.CONTAIN, border_radius=10)
-        self.img_a_clickable = ft.GestureDetector(content=self.img_a_display, on_tap=lambda e: self.open_image_in_viewer(e, self.img_a_display))
-        self.txt_url_a = ft.TextField(label="URL Imagen A", width=280, hint_text="https://...", on_change=lambda e: self.update_action_buttons_state())
-        self.btn_load_url_a = ft.ElevatedButton("Cargar URL A", on_click=lambda e: self.load_url(e, "A", self.txt_url_a, self.img_a_display), icon=ft.Icons.LINK, width=150, disabled=True)
-        
-        self.img_b_display = ft.Image(src=PLACEHOLDER_IMG_B_COLOR, width=350, height=250, fit=ft.ImageFit.CONTAIN, border_radius=10)
-        self.img_b_clickable = ft.GestureDetector(content=self.img_b_display, on_tap=lambda e: self.open_image_in_viewer(e, self.img_b_display))
-        self.txt_url_b = ft.TextField(label="URL Imagen B", width=280, hint_text="https://...", on_change=lambda e: self.update_action_buttons_state())
-        self.btn_load_url_b = ft.ElevatedButton("Cargar URL B", on_click=lambda e: self.load_url(e, "B", self.txt_url_b, self.img_b_display), icon=ft.Icons.LINK, width=150, disabled=True)
+        txt_url_width = 280
+        btn_load_url_width = 150
 
-        file_picker_a = ft.FilePicker(on_result=lambda e: self.on_file_picked(e, "A"))
-        file_picker_b = ft.FilePicker(on_result=lambda e: self.on_file_picked(e, "B"))
-        self.page.overlay.extend([file_picker_a, file_picker_b])
+        self.img_a_display = ft.Image(src=PLACEHOLDER_IMG_A_COLOR, width=350, height=250, fit=ft.BoxFit.CONTAIN, border_radius=10)
+        self.img_a_clickable = ft.GestureDetector(content=self.img_a_display, on_tap=lambda e: self.open_image_in_viewer(e, self.img_a_display))
+        self.txt_url_a = ft.TextField(label="URL Imagen A", width=txt_url_width, hint_text="https://...", on_change=lambda e: self.update_action_buttons_state())
+        self.btn_load_url_a = ft.Button("Cargar URL A", on_click=lambda e: self.load_url(e, "A", self.txt_url_a, self.img_a_display), icon=ft.Icons.LINK, width=btn_load_url_width, disabled=True)
+        
+        self.img_b_display = ft.Image(src=PLACEHOLDER_IMG_B_COLOR, width=350, height=250, fit=ft.BoxFit.CONTAIN, border_radius=10)
+        self.img_b_clickable = ft.GestureDetector(content=self.img_b_display, on_tap=lambda e: self.open_image_in_viewer(e, self.img_b_display))
+        self.txt_url_b = ft.TextField(label="URL Imagen B", width=txt_url_width, hint_text="https://...", on_change=lambda e: self.update_action_buttons_state())
+        self.btn_load_url_b = ft.Button("Cargar URL B", on_click=lambda e: self.load_url(e, "B", self.txt_url_b, self.img_b_display), icon=ft.Icons.LINK, width=btn_load_url_width, disabled=True)
+
+        async def pick_a(e):
+            files = await ft.FilePicker().pick_files(allow_multiple=False, allowed_extensions=["jpg", "jpeg", "png", "bmp"])
+            self.on_file_picked(files, "A")
+
+        async def pick_b(e):
+            files = await ft.FilePicker().pick_files(allow_multiple=False, allowed_extensions=["jpg", "jpeg", "png", "bmp"])
+            self.on_file_picked(files, "B")
 
         tab1_content = ft.ListView( expand=True, spacing=15, padding=20,
             controls=[
@@ -811,12 +819,12 @@ class MainApp:
                         ft.Column([
                             ft.Text("Imagen A", weight=ft.FontWeight.BOLD), self.img_a_clickable,
                             ft.Row([self.txt_url_a, self.btn_load_url_a], alignment=ft.MainAxisAlignment.CENTER, spacing=5,width=450,wrap=True),
-                            ft.ElevatedButton("Archivo Local A", icon=ft.Icons.FOLDER_OPEN, on_click=lambda _: file_picker_a.pick_files(allow_multiple=False, allowed_extensions=["jpg", "jpeg", "png", "bmp"]), width=self.txt_url_a.width + self.btn_load_url_a.width + 5),
+                            ft.Button("Archivo Local A", icon=ft.Icons.FOLDER_OPEN, on_click=pick_a, width=(txt_url_width + btn_load_url_width + 5)),
                         ], horizontal_alignment=ft.CrossAxisAlignment.CENTER, spacing=10),
                         ft.Column([
                             ft.Text("Imagen B", weight=ft.FontWeight.BOLD), self.img_b_clickable,
                             ft.Row([self.txt_url_b, self.btn_load_url_b], alignment=ft.MainAxisAlignment.CENTER, spacing=5,width=450,wrap=True),
-                            ft.ElevatedButton("Archivo Local B", icon=ft.Icons.FOLDER_OPEN, on_click=lambda _: file_picker_b.pick_files(allow_multiple=False, allowed_extensions=["jpg", "jpeg", "png", "bmp"]), width=self.txt_url_b.width + self.btn_load_url_b.width + 5),
+                            ft.Button("Archivo Local B", icon=ft.Icons.FOLDER_OPEN, on_click=pick_b, width=(txt_url_width + btn_load_url_width + 5)),
                         ], horizontal_alignment=ft.CrossAxisAlignment.CENTER, spacing=10),
                     ], alignment=ft.MainAxisAlignment.SPACE_AROUND, wrap=True,
                 ),
@@ -824,23 +832,23 @@ class MainApp:
         )
 
         # === Pestaña 2: Procesamiento y Generación APT ===
-        self.preprocessed_a_display = ft.Image(width=300, height=200, fit=ft.ImageFit.CONTAIN, border_radius=10, src=PLACEHOLDER_PREPROCESSED_A_PENDING)
+        self.preprocessed_a_display = ft.Image(width=300, height=200, fit=ft.BoxFit.CONTAIN, border_radius=10, src=PLACEHOLDER_PREPROCESSED_A_PENDING)
         self.preprocessed_a_clickable = ft.GestureDetector(content=self.preprocessed_a_display, on_tap=lambda e: self.open_image_in_viewer(e, self.preprocessed_a_display))
         
-        self.preprocessed_b_display = ft.Image(width=300, height=200, fit=ft.ImageFit.CONTAIN, border_radius=10, src=PLACEHOLDER_PREPROCESSED_B_PENDING)
+        self.preprocessed_b_display = ft.Image(width=300, height=200, fit=ft.BoxFit.CONTAIN, border_radius=10, src=PLACEHOLDER_PREPROCESSED_B_PENDING)
         self.preprocessed_b_clickable = ft.GestureDetector(content=self.preprocessed_b_display, on_tap=lambda e: self.open_image_in_viewer(e, self.preprocessed_b_display))
 
-        self.apt_image_display = ft.Image(width=600, height=200, fit=ft.ImageFit.CONTAIN, border_radius=10, src=PLACEHOLDER_APT_PENDING)
+        self.apt_image_display = ft.Image(width=600, height=200, fit=ft.BoxFit.CONTAIN, border_radius=10, src=PLACEHOLDER_APT_PENDING)
         self.apt_image_clickable = ft.GestureDetector(content=self.apt_image_display, on_tap=lambda e: self.open_image_in_viewer(e, self.apt_image_display))
 
         self.apt_encoded_status_text = ft.Text("Imagen APT: Aún no generada.",text_align=ft.TextAlign.CENTER,selectable=True)
         self.audio_status_text = ft.Text("Audio APT: Aún no generado.",text_align=ft.TextAlign.CENTER,selectable=True)
 
-        self.btn_preprocess = ft.ElevatedButton("1. Preprocesar Imágenes", icon=ft.Icons.IMAGE_SEARCH, on_click=self.do_preprocess_all, disabled=True)
-        self.btn_encode_apt = ft.ElevatedButton("2. Codificar a APT", icon=ft.Icons.TRANSFORM, on_click=self.do_encode_apt_action, disabled=True)
-        self.btn_generate_audio = ft.ElevatedButton("3. Generar Audio APT", icon=ft.Icons.AUDIOTRACK, on_click=self.do_generate_audio_action, disabled=True)
-        self.btn_play_audio = ft.ElevatedButton("Reproducir Audio APT", icon=ft.Icons.PLAY_ARROW, on_click=self.play_audio_apt_generated, disabled=True)
-        btn_open_output_folder = ft.ElevatedButton("Abrir Carpeta de Salida", icon=ft.Icons.FOLDER_SHARED, on_click=self.open_output_folder)
+        self.btn_preprocess = ft.Button("1. Preprocesar Imágenes", icon=ft.Icons.IMAGE_SEARCH, on_click=self.do_preprocess_all, disabled=True)
+        self.btn_encode_apt = ft.Button("2. Codificar a APT", icon=ft.Icons.TRANSFORM, on_click=self.do_encode_apt_action, disabled=True)
+        self.btn_generate_audio = ft.Button("3. Generar Audio APT", icon=ft.Icons.AUDIOTRACK, on_click=self.do_generate_audio_action, disabled=True)
+        self.btn_play_audio = ft.Button("Reproducir Audio APT", icon=ft.Icons.PLAY_ARROW, on_click=self.play_audio_apt_generated, disabled=True)
+        btn_open_output_folder = ft.Button("Abrir Carpeta de Salida", icon=ft.Icons.FOLDER_SHARED, on_click=self.open_output_folder)
 
         tab2_content = ft.ListView( expand=True, spacing=15, padding=20,
             controls=[
@@ -860,15 +868,15 @@ class MainApp:
                 ),
                 ft.Divider(height=10),
                 ft.Text("Imagen Codificada APT", size=18, weight=ft.FontWeight.BOLD, text_align=ft.TextAlign.CENTER),
-                ft.Container(content=self.apt_image_clickable, alignment=ft.alignment.center),
-                ft.Container(content=self.apt_encoded_status_text, alignment=ft.alignment.center, padding=10, 
-                    border=ft.border.all(1, ft.Colors.OUTLINE_VARIANT), 
+                ft.Container(content=self.apt_image_clickable, alignment=ft.Alignment.CENTER),
+                ft.Container(content=self.apt_encoded_status_text, alignment=ft.Alignment.CENTER, padding=10, 
+                    border=ft.Border.all(1, ft.Colors.OUTLINE_VARIANT), 
                     border_radius=5,
                     bgcolor=ft.Colors.with_opacity(0.03, ft.Colors.ON_SURFACE)),
                 ft.Divider(height=10),
                 ft.Text("Estado del Audio APT", size=18, weight=ft.FontWeight.BOLD, text_align=ft.TextAlign.CENTER),
-                ft.Container(content=self.audio_status_text, alignment=ft.alignment.center, padding=10, 
-                    border=ft.border.all(1, ft.Colors.OUTLINE_VARIANT), 
+                ft.Container(content=self.audio_status_text, alignment=ft.Alignment.CENTER, padding=10, 
+                    border=ft.Border.all(1, ft.Colors.OUTLINE_VARIANT), 
                     border_radius=5,
                     bgcolor=ft.Colors.with_opacity(0.03, ft.Colors.ON_SURFACE)),
                 ft.Row([
@@ -885,31 +893,33 @@ class MainApp:
             options=[ft.dropdown.Option(key=name) for name in scripts_config.keys()],
             value=list(scripts_config.keys())[0], # Seleccionar el primero por defecto
             width=400,
-            on_change=self.on_sdr_script_dropdown_change
+            on_text_change=self.on_sdr_script_dropdown_change
         )
 
         def slider_input_freq_tx_sdr_changed(e):
-            self.slider_freq_tx_sdr.value=round(self.slider_freq_tx_sdr.value,1)
-            self.text_value_freq_tx_sdr.value = f"{self.slider_freq_tx_sdr.value} MHz"
+            # self.slider_freq_tx_sdr.value=round(self.slider_freq_tx_sdr.value,1)
+            self.text_value_freq_tx_sdr.value = f"{self.slider_freq_tx_sdr.value:.1f} MHz"
+            self.text_value_freq_tx_sdr.update()
             self.update_sdr_command_display()
-            self.page.update()
+            # self.page.update()
         
         def slider_samp_rate_sdr_changed(e):
-            self.slider_samp_rate_sdr.value=round(self.slider_samp_rate_sdr.value,1)
-            self.text_value_samp_rate_sdr.value = f"{self.slider_samp_rate_sdr.value} MSps" # Cambiado a MSps
+            # self.slider_samp_rate_sdr.value=round(self.slider_samp_rate_sdr.value,1)
+            self.text_value_samp_rate_sdr.value = f"{self.slider_samp_rate_sdr.value:.1f} MSps" # Cambiado a MSps
+            self.text_value_samp_rate_sdr.update()
             self.update_sdr_command_display()
-            self.page.update()
+            # self.page.update()
 
         self.text_freq_tx_sdr=ft.Text("Frecuencia de transmisión:")
-        self.slider_freq_tx_sdr = ft.Slider(value=137.5,min=88,max=1700,label="{value} MHz",on_change=slider_input_freq_tx_sdr_changed,divisions=(1700-88)/0.1, round=1) # (max-min)/step
+        self.slider_freq_tx_sdr = ft.Slider(value=137.5,min=88,max=1700,label="{value} MHz",on_change=slider_input_freq_tx_sdr_changed,divisions=int((1700-88)/0.1), round=1) # (max-min)/step
         self.text_value_freq_tx_sdr=ft.Text(f"{self.slider_freq_tx_sdr.value} MHz")
         
         self.text_samp_rate_sdr=ft.Text("Frecuencia de muestreo SDR (sample rate):")
-        self.slider_samp_rate_sdr = ft.Slider(value=2.4,min=0.2,max=20,label="{value} MHz", on_change=slider_samp_rate_sdr_changed,divisions=(20-0.2)/0.1, round=1) # (max-min)/step
+        self.slider_samp_rate_sdr = ft.Slider(value=2.4,min=0.2,max=20,label="{value} MHz", on_change=slider_samp_rate_sdr_changed,divisions=int((20-0.2)/0.1), round=1) # (max-min)/step
         self.text_value_samp_rate_sdr=ft.Text(f"{self.slider_samp_rate_sdr.value} MHz")
         
         self.command_label_text = ft.Text("Comando:\nEsperando configuración...", expand=True, selectable=True, no_wrap=False) # no_wrap=False para permitir multilínea
-        self.btn_transmit = ft.ElevatedButton("Transmitir con SDR", icon=ft.Icons.SEND, on_click=self.do_transmit_sdr, disabled=True)
+        self.btn_transmit = ft.Button("Transmitir con SDR", icon=ft.Icons.SEND, on_click=self.do_transmit_sdr, disabled=True)
 
         tab3_content = ft.ListView( expand=True, spacing=15, padding=20,
             controls=[
@@ -926,24 +936,39 @@ class MainApp:
                 ft.Container(
                     content=self.command_label_text, 
                     padding=10, 
-                    border=ft.border.all(1, ft.Colors.OUTLINE_VARIANT), 
+                    border=ft.Border.all(1, ft.Colors.OUTLINE_VARIANT), 
                     border_radius=5,
                     bgcolor=ft.Colors.with_opacity(0.03, ft.Colors.ON_SURFACE) # Fondo sutil para el comando
                 ),
                 ft.Divider(height=10),
-                ft.Container(content=self.btn_transmit, alignment=ft.alignment.center),
+                ft.Container(content=self.btn_transmit, alignment=ft.Alignment.CENTER),
             ]
         )
 
         main_tabs = ft.Tabs(
             selected_index=0,
-            animation_duration=300,
-            tabs=[
-                ft.Tab(text="Imágenes Fuente", icon=ft.Icons.COLLECTIONS_BOOKMARK_ROUNDED, content=tab1_content),
-                ft.Tab(text="Procesamiento APT", icon=ft.Icons.SETTINGS_APPLICATIONS_ROUNDED, content=tab2_content),
-                ft.Tab(text="Transmisión SDR", icon=ft.Icons.SEND_TO_MOBILE_ROUNDED, content=tab3_content),
-            ],
+            length=3,
             expand=True,
+            content=ft.Column(
+                expand=True,
+                controls=[
+                    ft.TabBar(
+                        tabs=[
+                            ft.Tab(label="Imágenes Fuente", icon=ft.Icons.COLLECTIONS_BOOKMARK_ROUNDED),
+                            ft.Tab(label="Procesamiento APT", icon=ft.Icons.SETTINGS_APPLICATIONS_ROUNDED),
+                            ft.Tab(label="Transmisión SDR", icon=ft.Icons.SEND_TO_MOBILE_ROUNDED),
+                        ]
+                    ),
+                    ft.TabBarView(
+                        expand=True,
+                        controls=[
+                            tab1_content,
+                            tab2_content,
+                            tab3_content,
+                        ],
+                    ),
+                ],
+            ),
         )
 
         self.page.add(
@@ -970,5 +995,5 @@ def main(page: ft.Page):
     # page.update() # MainApp o sus métodos se encargan
 
 if __name__ == "__main__":
-    ft.app(target=main, assets_dir="assets") # En caso de tener una carpeta 'assets' con icon.png u otros assets
+    ft.run(main, assets_dir="assets") # En caso de tener una carpeta 'assets' con icon.png u otros assets
     # ft.app(target=main)
