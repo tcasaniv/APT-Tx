@@ -896,27 +896,77 @@ class MainApp:
             on_text_change=self.on_sdr_script_dropdown_change
         )
 
-        def slider_input_freq_tx_sdr_changed(e):
-            # self.slider_freq_tx_sdr.value=round(self.slider_freq_tx_sdr.value,1)
-            self.text_value_freq_tx_sdr.value = f"{self.slider_freq_tx_sdr.value:.1f} MHz"
-            self.text_value_freq_tx_sdr.update()
+        # --- Handlers para Frecuencia de Transmisión ---
+        def slider_freq_changed(e):
+            self.textfield_freq_tx_sdr.value = f"{self.slider_freq_tx_sdr.value:.1f}"
+            self.textfield_freq_tx_sdr.update()
             self.update_sdr_command_display()
-            # self.page.update()
-        
-        def slider_samp_rate_sdr_changed(e):
-            # self.slider_samp_rate_sdr.value=round(self.slider_samp_rate_sdr.value,1)
-            self.text_value_samp_rate_sdr.value = f"{self.slider_samp_rate_sdr.value:.1f} MSps" # Cambiado a MSps
-            self.text_value_samp_rate_sdr.update()
-            self.update_sdr_command_display()
-            # self.page.update()
 
-        self.text_freq_tx_sdr=ft.Text("Frecuencia de transmisión:")
-        self.slider_freq_tx_sdr = ft.Slider(value=137.5,min=88,max=1700,label="{value} MHz",on_change=slider_input_freq_tx_sdr_changed,divisions=int((1700-88)/0.1), round=1) # (max-min)/step
-        self.text_value_freq_tx_sdr=ft.Text(f"{self.slider_freq_tx_sdr.value} MHz")
+        def textfield_freq_changed(e):
+            try:
+                val = float(self.textfield_freq_tx_sdr.value)
+                if 88 <= val <= 1700:
+                    self.slider_freq_tx_sdr.value = val
+                    self.slider_freq_tx_sdr.update()
+                    self.update_sdr_command_display()
+                else:
+                    self.textfield_freq_tx_sdr.value = f"{self.slider_freq_tx_sdr.value:.1f}"
+                    self.textfield_freq_tx_sdr.update()
+            except ValueError:
+                self.textfield_freq_tx_sdr.value = f"{self.slider_freq_tx_sdr.value:.1f}"
+                self.textfield_freq_tx_sdr.update()
+
+        # --- Handlers para Sample Rate ---
+        def slider_samp_rate_changed(e):
+            self.textfield_samp_rate_sdr.value = f"{self.slider_samp_rate_sdr.value:.1f}"
+            self.textfield_samp_rate_sdr.update()
+            self.update_sdr_command_display()
+
+        def textfield_samp_rate_changed(e):
+            try:
+                val = float(self.textfield_samp_rate_sdr.value)
+                if 0.2 <= val <= 20:
+                    self.slider_samp_rate_sdr.value = val
+                    self.slider_samp_rate_sdr.update()
+                    self.update_sdr_command_display()
+                else:
+                    self.textfield_samp_rate_sdr.value = f"{self.slider_samp_rate_sdr.value:.1f}"
+                    self.textfield_samp_rate_sdr.update()
+            except ValueError:
+                self.textfield_samp_rate_sdr.value = f"{self.slider_samp_rate_sdr.value:.1f}"
+                self.textfield_samp_rate_sdr.update()
+
+        self.text_freq_tx_sdr = ft.Text("Frecuencia de transmisión:")
+        self.slider_freq_tx_sdr = ft.Slider(
+            value=137.5, min=88, max=1700, 
+            label="{value} MHz", 
+            on_change=slider_freq_changed
+        ) 
+        self.textfield_freq_tx_sdr = ft.TextField(
+            value=f"{self.slider_freq_tx_sdr.value:.1f}", 
+            width=150, 
+            suffix=ft.Text("MHz"), 
+            keyboard_type=ft.KeyboardType.NUMBER,
+            on_submit=textfield_freq_changed,
+            on_blur=textfield_freq_changed,
+            text_align=ft.TextAlign.RIGHT,
+        )
         
-        self.text_samp_rate_sdr=ft.Text("Frecuencia de muestreo SDR (sample rate):")
-        self.slider_samp_rate_sdr = ft.Slider(value=2.4,min=0.2,max=20,label="{value} MHz", on_change=slider_samp_rate_sdr_changed,divisions=int((20-0.2)/0.1), round=1) # (max-min)/step
-        self.text_value_samp_rate_sdr=ft.Text(f"{self.slider_samp_rate_sdr.value} MHz")
+        self.text_samp_rate_sdr = ft.Text("Frecuencia de muestreo SDR (sample rate):")
+        self.slider_samp_rate_sdr = ft.Slider(
+            value=2.4, min=0.2, max=20, 
+            label="{value} MHz", 
+            on_change=slider_samp_rate_changed
+        )
+        self.textfield_samp_rate_sdr = ft.TextField(
+            value=f"{self.slider_samp_rate_sdr.value:.1f}", 
+            width=150, 
+            suffix=ft.Text("MSps"), 
+            keyboard_type=ft.KeyboardType.NUMBER,
+            on_submit=textfield_samp_rate_changed,
+            on_blur=textfield_samp_rate_changed,
+            text_align=ft.TextAlign.RIGHT,
+        )
         
         self.command_label_text = ft.Text("Comando:\nEsperando configuración...", expand=True, selectable=True, no_wrap=False) # no_wrap=False para permitir multilínea
         self.btn_transmit = ft.Button("Transmitir con SDR", icon=ft.Icons.SEND, on_click=self.do_transmit_sdr, disabled=True)
@@ -926,9 +976,9 @@ class MainApp:
                 ft.Text("3. Opciones y Transmisión SDR", size=20, weight=ft.FontWeight.BOLD),
                 self.sdr_script_dropdown,
                 ft.Text("Parámetros de transmisión para el script:", weight=ft.FontWeight.W_400),
-                ft.Row([self.text_freq_tx_sdr,self.text_value_freq_tx_sdr]),
+                ft.Row([self.text_freq_tx_sdr, self.textfield_freq_tx_sdr], alignment=ft.MainAxisAlignment.SPACE_BETWEEN),
                 self.slider_freq_tx_sdr,
-                ft.Row([self.text_samp_rate_sdr,self.text_value_samp_rate_sdr]),
+                ft.Row([self.text_samp_rate_sdr, self.textfield_samp_rate_sdr], alignment=ft.MainAxisAlignment.SPACE_BETWEEN),
                 self.slider_samp_rate_sdr,
                 ft.Text("Nota: Ajustar parámetros según el SDR a utilizar", italic=True, size=12),
                 ft.Divider(height=10),
