@@ -1,6 +1,8 @@
 import json
 import os
 import datetime
+import csv
+import io
 
 class HistoryManager:
     def __init__(self, history_file):
@@ -54,3 +56,34 @@ class HistoryManager:
 
     def get_history(self):
         return self.history
+
+    def export_as_csv(self, file_path):
+        if not self.history:
+            return False
+        
+        try:
+            keys = self.history[0].keys()
+            with open(file_path, 'w', newline='', encoding='utf-8') as f:
+                dict_writer = csv.DictWriter(f, fieldnames=keys)
+                dict_writer.writeheader()
+                dict_writer.writerows(self.history)
+            return True
+        except Exception as e:
+            print(f"Error exporting CSV: {e}")
+            return False
+
+    def export_as_markdown(self):
+        if not self.history:
+            return "No hay historial para exportar."
+        
+        keys = ["timestamp", "sdr_script", "sdr_freq", "sdr_samp_rate"]
+        headers = ["Fecha/Hora", "Evento / Script", "Frecuencia", "Muestreo"]
+        
+        md = "| " + " | ".join(headers) + " |\n"
+        md += "| " + " | ".join(["---"] * len(headers)) + " |\n"
+        
+        for entry in self.history:
+            row = [str(entry.get(k, "")) for k in keys]
+            md += "| " + " | ".join(row) + " |\n"
+        
+        return md

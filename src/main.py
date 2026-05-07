@@ -821,6 +821,27 @@ class MainApp:
         if hasattr(self, 'history_dialog_instance'):
             self.close_dialog(self.history_dialog_instance)
 
+    def export_history_csv_action(self, e):
+        file_path = os.path.join(get_app_files_dir(), f"history_export_{int(time.time())}.csv")
+        if self.history_manager.export_as_csv(file_path):
+            self.status_bar_text.value = f"Historial exportado a CSV: {os.path.basename(file_path)}"
+            open_file_with_default_program(file_path)
+        else:
+            self.status_bar_text.value = "Error al exportar historial a CSV o historial vacío."
+        self.page.update()
+
+    def export_history_markdown_action(self, e):
+        md_text = self.history_manager.export_as_markdown()
+        file_path = os.path.join(get_app_files_dir(), f"history_export_{int(time.time())}.md")
+        try:
+            with open(file_path, "w", encoding="utf-8") as f:
+                f.write(md_text)
+            self.status_bar_text.value = f"Historial exportado a Markdown: {os.path.basename(file_path)}"
+            open_file_with_default_program(file_path)
+        except Exception as ex:
+             self.status_bar_text.value = f"Error al exportar a Markdown: {ex}"
+        self.page.update()
+
     def show_history_dialog(self, e):
         self.history_items = self.history_manager.get_history()
         self.filtered_history = list(self.history_items)
@@ -859,6 +880,8 @@ class MainApp:
             content=ft.Column([
                 ft.Row([
                     self.history_search_field,
+                    ft.IconButton(ft.Icons.FILE_DOWNLOAD, tooltip="Exportar CSV", on_click=self.export_history_csv_action),
+                    ft.IconButton(ft.Icons.DESCRIPTION, tooltip="Exportar Markdown", on_click=self.export_history_markdown_action),
                     ft.IconButton(ft.Icons.DELETE_SWEEP, tooltip="Vaciar Historial", on_click=self.clear_all_history, icon_color=ft.Colors.RED_400),
                 ], spacing=10),
                 ft.Divider(),
