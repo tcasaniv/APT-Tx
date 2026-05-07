@@ -588,6 +588,10 @@ class MainApp:
             preprocessed_b_path_generated = metrics_b["output_path"]
             self.current_metrics["preprocessed_a"] = metrics_a
             self.current_metrics["preprocessed_b"] = metrics_b
+            
+            # Guardar progreso en el historial
+            self.save_current_to_history("Preprocesamiento completado")
+
             self.status_bar_text.value = "Ambas imágenes preprocesadas exitosamente. Listo para codificar a APT."
             reset_downstream_processing(self.page, "preprocess_changed") # Resetea APT y audio lógicamente
             self.apt_image_display.src = PLACEHOLDER_APT_PENDING # Resetea UI de APT
@@ -619,6 +623,8 @@ class MainApp:
         
         if metrics:
             self.current_metrics["apt_encoding"] = metrics
+            # Guardar progreso en el historial
+            self.save_current_to_history("Codificación APT completada")
         else: # Si falló la codificación
             reset_downstream_processing(self.page, "apt_encode_failed") # Lógica para resetear audio
             self.apt_encoded_status_text.value = "Imagen APT: Aún no generada."
@@ -637,6 +643,8 @@ class MainApp:
                                           generated_apt_image_path)
         if metrics:
             self.current_metrics["audio_generation"] = metrics
+            # Guardar progreso en el historial
+            self.save_current_to_history("Generación de Audio completada")
         else:
             reset_downstream_processing(self.page, "audio_gen_failed")
         self.update_action_buttons_state()
@@ -691,19 +699,8 @@ class MainApp:
         self.update_sdr_command_display() # Asegura que el comando mostrado es el actual
                                          # antes de pasarlo a sdr_transmission
         
-        # Guardar en historial antes de transmitir (o después, pero aquí ya tenemos todo)
-        self.history_manager.add_entry(
-            source_a=image_a_source_path,
-            source_b=image_b_source_path,
-            preprocessed_a=preprocessed_a_path_generated,
-            preprocessed_b=preprocessed_b_path_generated,
-            apt_image=generated_apt_image_path,
-            wav_audio=generated_wav_path,
-            sdr_script=selected_script_display_name,
-            sdr_freq=sdr_options["FREQ_SDR"],
-            sdr_samp_rate=sdr_options["SAMP_RATE_SDR"],
-            metrics=self.current_metrics
-        )
+        # Guardar en historial la transmisión real
+        self.save_current_to_history("TRANSMISIÓN")
 
         sdr_transmission(
             self.page, 
@@ -715,6 +712,100 @@ class MainApp:
         )
         # sdr_transmission ya llama a page.update() internamente
 
+    def save_current_to_history(self, event_name):
+        selected_script_display_name = self.sdr_script_dropdown.value if hasattr(self, 'sdr_script_dropdown') else "N/A"
+        sdr_freq = f"{self.slider_freq_tx_sdr.value}M" if hasattr(self, 'slider_freq_tx_sdr') else "N/A"
+        sdr_samp_rate = f"{self.slider_samp_rate_sdr.value}M" if hasattr(self, 'slider_samp_rate_sdr') else "N/A"
+
+        self.history_manager.add_entry(
+            source_a=image_a_source_path,
+            source_b=image_b_source_path,
+            preprocessed_a=preprocessed_a_path_generated,
+            preprocessed_b=preprocessed_b_path_generated,
+            apt_image=generated_apt_image_path,
+            wav_audio=generated_wav_path,
+            sdr_script=f"[{event_name}] {selected_script_display_name}",
+            sdr_freq=sdr_freq,
+            sdr_samp_rate=sdr_samp_rate,
+            metrics=self.current_metrics
+        )
+
+    def load_history_entry(self, entry):
+        global image_a_source_path, image_b_source_path
+        global preprocessed_a_path_generated, preprocessed_b_path_generated
+        global generated_apt_image_path, generated_wav_path
+
+        # Restaurar Paths
+        image_a_source_path = entry.get("source_a")
+        image_b_source_path = entry.get("source_b")
+        preprocessed_a_path_generated = entry.get("preprocessed_a")
+        preprocessed_b_path_generated = entry.get("preprocessed_b")
+        generated_apt_image_path = entry.get("apt_image")
+        generated_wav_path = entry.get("wav_audio")
+
+        # Restaurar Métricas
+        self.current_metrics = entry.get("metrics", {
+            "preprocessed_a": None, "preprocessed_b": None,
+            "apt_encoding": None, "audio_generation": None
+        })
+
+        # Restaurar UI - Imágenes
+        self.img_a_display.src = image_a_source_path if image_a_source_path else PLACEHOLDER_IMG_A_COLOR
+        self.img_b_display.src = image_b_source_path if image_b_source_path else PLACEHOLDER_IMG_B_COLOR
+        self.preprocessed_a_display.src = preprocessed_a_path_generated if preprocessed_a_path_generated else PLACEHOLDER_PREPROCESSED_A_PENDING
+        self.preprocessed_b_display.src = preprocessed_b_path_generated if preprocessed_b_path_generated else PLACEHOLDER_PREPROCESSED_B_PENDING
+        self.apt_image_display.src = generated_apt_image_path if generated_apt_image_path else PLACEHOLDER_APT_PENDING
+
+        # Restaurar UI - Textos de Estado
+        m = self.current_metrics
+        if m.get("apt_encoding"):
+            e = m["apt_encoding"]
+            self.apt_encoded_status_text.value = (
+                f"Imagen APT restaurada: {os.path.basename(e['output_path'])}\n"
+                f"Tiempo: {e['time']:.2f}s | LPS: {e['lps']:.2f}"
+            )
+        else:
+            self.apt_encoded_status_text.value = "Imagen APT: No disponible en este registro."
+
+        if m.get("audio_generation"):
+            g = m["audio_generation"]
+            self.audio_status_text.value = (
+                f"Audio APT restaurado: {os.path.basename(g['output_path'])}\n"
+                f"Duración: {g['duration']:.2f}s | Tiempo Gen: {g['time']:.2f}s"
+            )
+        else:
+            self.audio_status_text.value = "Audio APT: No disponible en este registro."
+
+        # Restaurar Configuración SDR (limpiar prefijo de evento si existe)
+        script_name = entry["sdr_script"]
+        if "]" in script_name:
+            parts = script_name.split("]", 1)
+            script_name = parts[1].strip() if len(parts) > 1 else script_name
+        
+        if script_name in scripts_config:
+            self.sdr_script_dropdown.value = script_name
+        
+        try:
+            freq_val = float(entry["sdr_freq"].replace("M", ""))
+            self.slider_freq_tx_sdr.value = freq_val
+            self.textfield_freq_tx_sdr.value = f"{freq_val:.1f}"
+        except: pass
+
+        try:
+            samp_val = float(entry["sdr_samp_rate"].replace("M", ""))
+            self.slider_samp_rate_sdr.value = samp_val
+            self.textfield_samp_rate_sdr.value = f"{samp_val:.1f}"
+        except: pass
+
+        self.status_bar_text.value = f"Estado: Registro del {entry['timestamp']} cargado exitosamente."
+        self.update_action_buttons_state()
+        self.update_sdr_command_display()
+        self.page.update()
+        
+        # Cerrar diálogos si hubiera
+        if hasattr(self, 'history_dialog_instance'):
+            self.close_dialog(self.history_dialog_instance)
+
     def show_history_dialog(self, e):
         self.history_items = self.history_manager.get_history()
         self.filtered_history = list(self.history_items)
@@ -722,7 +813,7 @@ class MainApp:
         self.sort_ascending = True
 
         self.history_search_field = ft.TextField(
-            label="Filtrar historial...",
+            label="Filtrar historial (evento, fecha, script...)",
             prefix_icon=ft.Icons.SEARCH,
             on_change=self.filter_history_table,
             expand=True
@@ -731,11 +822,10 @@ class MainApp:
         self.history_data_table = ft.DataTable(
             columns=[
                 ft.DataColumn(ft.Text("Fecha/Hora"), on_sort=lambda e: self.sort_history_table(0)),
-                ft.DataColumn(ft.Text("Script SDR"), on_sort=lambda e: self.sort_history_table(1)),
+                ft.DataColumn(ft.Text("Evento / Script"), on_sort=lambda e: self.sort_history_table(1)),
                 ft.DataColumn(ft.Text("Frecuencia"), on_sort=lambda e: self.sort_history_table(2)),
                 ft.DataColumn(ft.Text("Muestreo"), on_sort=lambda e: self.sort_history_table(3)),
                 ft.DataColumn(ft.Text("Archivos")),
-                ft.DataColumn(ft.Text("Métricas")),
                 ft.DataColumn(ft.Text("Acciones")),
             ],
             rows=[],
@@ -746,10 +836,10 @@ class MainApp:
 
         self.update_history_table()
 
-        history_dialog = ft.AlertDialog(
+        self.history_dialog_instance = ft.AlertDialog(
             title=ft.Row([
                 ft.Icon(ft.Icons.HISTORY),
-                ft.Text("Historial de Transmisiones"),
+                ft.Text("Historial de Actividad y Transmisiones"),
             ], spacing=10),
             content=ft.Column([
                 ft.Row([
@@ -760,29 +850,21 @@ class MainApp:
                 ft.Container(
                     content=ft.Column([self.history_data_table], scroll=ft.ScrollMode.AUTO),
                     height=400,
-                    width=1000,
+                    width=1100,
                 )
             ], tight=True, spacing=10),
             actions=[
-                ft.TextButton("Cerrar", on_click=lambda _: self.close_dialog(history_dialog))
+                ft.TextButton("Cerrar", on_click=lambda _: self.close_dialog(self.history_dialog_instance))
             ],
             actions_alignment=ft.MainAxisAlignment.END,
         )
 
-        self.page.show_dialog(history_dialog)
+        self.page.show_dialog(self.history_dialog_instance)
         self.page.update()
 
     def update_history_table(self):
         self.history_data_table.rows = []
         for i, entry in enumerate(self.filtered_history):
-            # Formatear métricas
-            m = entry.get("metrics", {})
-            metrics_summary = ""
-            if m.get("audio_generation"):
-                metrics_summary = f"Audio: {m['audio_generation']['time']:.1f}s | {m['audio_generation']['lps']:.1f} LPS"
-            elif m.get("apt_encoding"):
-                metrics_summary = f"APT: {m['apt_encoding']['time']:.1f}s | {m['apt_encoding']['lps']:.1f} LPS"
-
             # Buscar el índice original para borrar
             original_index = self.history_items.index(entry)
 
@@ -790,17 +872,19 @@ class MainApp:
                 ft.DataRow(
                     cells=[
                         ft.DataCell(ft.Text(entry["timestamp"])),
-                        ft.DataCell(ft.Text(entry["sdr_script"])),
+                        ft.DataCell(ft.Text(entry["sdr_script"], size=12)),
                         ft.DataCell(ft.Text(entry["sdr_freq"])),
                         ft.DataCell(ft.Text(entry["sdr_samp_rate"])),
                         ft.DataCell(ft.Row([
-                            ft.IconButton(ft.Icons.IMAGE, tooltip="Ver Orig A", on_click=lambda e, p=entry["source_a"]: open_file_with_default_program(p), disabled=not entry["source_a"]),
-                            ft.IconButton(ft.Icons.IMAGE, tooltip="Ver Orig B", on_click=lambda e, p=entry["source_b"]: open_file_with_default_program(p), disabled=not entry["source_b"]),
-                            ft.IconButton(ft.Icons.TRANSFORM, tooltip="Ver APT", on_click=lambda e, p=entry["apt_image"]: open_file_with_default_program(p), disabled=not entry["apt_image"]),
-                            ft.IconButton(ft.Icons.AUDIO_FILE, tooltip="Oír Audio", on_click=lambda e, p=entry["wav_audio"]: open_file_with_default_program(p), disabled=not entry["wav_audio"]),
+                            ft.IconButton(ft.Icons.IMAGE, tooltip="Ver Orig A", on_click=lambda e, p=entry["source_a"]: open_file_with_default_program(p), disabled=not entry["source_a"], icon_size=18),
+                            ft.IconButton(ft.Icons.IMAGE, tooltip="Ver Orig B", on_click=lambda e, p=entry["source_b"]: open_file_with_default_program(p), disabled=not entry["source_b"], icon_size=18),
+                            ft.IconButton(ft.Icons.TRANSFORM, tooltip="Ver APT", on_click=lambda e, p=entry["apt_image"]: open_file_with_default_program(p), disabled=not entry["apt_image"], icon_size=18),
+                            ft.IconButton(ft.Icons.AUDIO_FILE, tooltip="Oír Audio", on_click=lambda e, p=entry["wav_audio"]: open_file_with_default_program(p), disabled=not entry["wav_audio"], icon_size=18),
                         ], spacing=0)),
-                        ft.DataCell(ft.Text(metrics_summary, size=11)),
-                        ft.DataCell(ft.IconButton(ft.Icons.DELETE_OUTLINE, icon_color=ft.Colors.RED_400, on_click=lambda e, idx=original_index: self.delete_history_entry(idx))),
+                        ft.DataCell(ft.Row([
+                            ft.ElevatedButton("Retomar", icon=ft.Icons.RESTORE, on_click=lambda e, ent=entry: self.load_history_entry(ent), style=ft.ButtonStyle(padding=5)),
+                            ft.IconButton(ft.Icons.DELETE_OUTLINE, icon_color=ft.Colors.RED_400, on_click=lambda e, idx=original_index: self.delete_history_entry(idx)),
+                        ], spacing=5)),
                     ]
                 )
             )
@@ -816,7 +900,7 @@ class MainApp:
         keys = ["timestamp", "sdr_script", "sdr_freq", "sdr_samp_rate"]
         key = keys[col_index]
         
-        self.filtered_history.sort(key=lambda x: x.get(key, ""), reverse=not self.sort_ascending)
+        self.filtered_history.sort(key=lambda x: str(x.get(key, "")).lower(), reverse=not self.sort_ascending)
         self.update_history_table()
 
     def filter_history_table(self, e):
