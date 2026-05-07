@@ -334,8 +334,23 @@ def sdr_transmission(page: ft.Page, status_label, command_label_ref, wav_to_tran
     status_label.value = f"Ejecutando: {selected_script_filename}..."
     page.update()
 
+    # Configurar entorno para Radioconda en Windows
+    env = os.environ.copy()
+    if platform.system() == "Windows" and "radioconda" in command_list[0].lower():
+        conda_base = os.path.dirname(command_list[0])
+        conda_bin = conda_base
+        conda_scripts = os.path.join(conda_base, "Scripts")
+        conda_library_bin = os.path.join(conda_base, "Library", "bin")
+        
+        # Añadir rutas al PATH
+        new_paths = [conda_bin, conda_scripts, conda_library_bin]
+        env["PATH"] = os.pathsep.join(new_paths) + os.pathsep + env.get("PATH", "")
+        
+        # También establecer CONDA_PREFIX por si acaso
+        env["CONDA_PREFIX"] = conda_base
+
     try:
-        process = subprocess.Popen(command_list)
+        process = subprocess.Popen(command_list, env=env)
         process.wait() 
 
         if process.returncode == 0:
