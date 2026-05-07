@@ -7,6 +7,7 @@ import shutil
 import requests # Para descargar imágenes desde URL
 import sys # Necesario para sys.executable y sys.frozen
 from utils import apt_encoder, modulate_APT_img_to_audio, preprocesar_img_to_APT
+from history_manager import HistoryManager
 
 VERSION_APP="v1.0.1"
 
@@ -142,7 +143,7 @@ def preprocessing_img(page: ft.Page, image_name_suffix: str, status_bar_text_ref
                 f"Guardada como: {os.path.basename(metrics['output_path'])}"
             )
             page.update()
-            return metrics["output_path"]
+            return metrics
         else:
             status_bar_text_ref.value = f"Error preprocesando Imagen {image_name_suffix}. Ver consola."
             preprocessed_image_display_ref.src = PLACEHOLDER_PREPROCESSED_A_PENDING if image_name_suffix == "A" else PLACEHOLDER_PREPROCESSED_B_PENDING
@@ -196,7 +197,7 @@ def apt_encoding_img(page: ft.Page, status_label, apt_image_display,
             )
             page.update()
             generated_apt_image_path = metrics["output_path"]
-            return metrics["output_path"]
+            return metrics
         else:
             status_label.value = f"Error generando imagen APT. Ver consola."
             apt_image_display.src = PLACEHOLDER_APT_PENDING
@@ -246,7 +247,7 @@ def audio_apt_generation(page: ft.Page, status_label, audio_status_text, apt_img
             status_label.value = f"Audio APT generado en {time_text}."
             page.update()
             generated_wav_path = metrics["output_path"]
-            return metrics["output_path"]
+            return metrics
         else:
             status_label.value = f"Error generando audio APT. Ver consola."
             page.update()
@@ -358,6 +359,13 @@ def sdr_transmission(page: ft.Page, status_label, command_label_ref, wav_to_tran
 class MainApp:
     def __init__(self, page: ft.Page):
         self.page = page
+        self.history_manager = HistoryManager(os.path.join(get_app_files_dir(), "history.json"))
+        self.current_metrics = {
+            "preprocessed_a": None,
+            "preprocessed_b": None,
+            "apt_encoding": None,
+            "audio_generation": None
+        }
         self.setup_ui()
         self.reset_all_processing_state_and_ui(None)
 
@@ -412,6 +420,13 @@ class MainApp:
         preprocessed_b_path_generated = None
         generated_apt_image_path = None
         generated_wav_path = None
+
+        self.current_metrics = {
+            "preprocessed_a": None,
+            "preprocessed_b": None,
+            "apt_encoding": None,
+            "audio_generation": None
+        }
 
         self.img_a_display.src = PLACEHOLDER_IMG_A_COLOR
         self.img_b_display.src = PLACEHOLDER_IMG_B_COLOR
@@ -561,16 +576,18 @@ class MainApp:
             return
         
         # Preprocesar A
-        temp_preproc_a = preprocessing_img(self.page, "A", self.status_bar_text, 
+        metrics_a = preprocessing_img(self.page, "A", self.status_bar_text, 
                                            self.preprocessed_a_display, image_a_source_path)
         # Preprocesar B
-        temp_preproc_b = preprocessing_img(self.page, "B", self.status_bar_text, 
+        metrics_b = preprocessing_img(self.page, "B", self.status_bar_text, 
                                            self.preprocessed_b_display, image_b_source_path)
 
         # Solo actualizar paths globales si ambos tuvieron éxito
-        if temp_preproc_a and temp_preproc_b:
-            preprocessed_a_path_generated = temp_preproc_a
-            preprocessed_b_path_generated = temp_preproc_b
+        if metrics_a and metrics_b:
+            preprocessed_a_path_generated = metrics_a["output_path"]
+            preprocessed_b_path_generated = metrics_b["output_path"]
+            self.current_metrics["preprocessed_a"] = metrics_a
+            self.current_metrics["preprocessed_b"] = metrics_b
             self.status_bar_text.value = "Ambas imágenes preprocesadas exitosamente. Listo para codificar a APT."
             reset_downstream_processing(self.page, "preprocess_changed") # Resetea APT y audio lógicamente
             self.apt_image_display.src = PLACEHOLDER_APT_PENDING # Resetea UI de APT
@@ -585,8 +602,8 @@ class MainApp:
         else:
             preprocessed_a_path_generated = None
             preprocessed_b_path_generated = None
-            if not temp_preproc_a: self.preprocessed_a_display.src = PLACEHOLDER_PREPROCESSED_A_PENDING
-            if not temp_preproc_b: self.preprocessed_b_display.src = PLACEHOLDER_PREPROCESSED_B_PENDING
+            if not metrics_a: self.preprocessed_a_display.src = PLACEHOLDER_PREPROCESSED_A_PENDING
+            if not metrics_b: self.preprocessed_b_display.src = PLACEHOLDER_PREPROCESSED_B_PENDING
             # self.status_bar_text.value = "Error durante el preprocesamiento de una o ambas imágenes."
             reset_downstream_processing(self.page, "preprocess_changed") # Resetea APT y audio lógicamente
             self.reset_downstream_for_image_ui("A") # Esto resetea la UI de APT y audio también
@@ -596,11 +613,13 @@ class MainApp:
         self.page.update()
     
     def do_encode_apt_action(self, e):
-        encoded_path = apt_encoding_img(self.page, self.status_bar_text, self.apt_image_display,
+        metrics = apt_encoding_img(self.page, self.status_bar_text, self.apt_image_display,
                                         preprocessed_a_path_generated, preprocessed_b_path_generated,
                                         self.apt_encoded_status_text)
         
-        if not encoded_path: # Si falló la codificación
+        if metrics:
+            self.current_metrics["apt_encoding"] = metrics
+        else: # Si falló la codificación
             reset_downstream_processing(self.page, "apt_encode_failed") # Lógica para resetear audio
             self.apt_encoded_status_text.value = "Imagen APT: Aún no generada."
             self.apt_encoded_status_text.tooltip = None
@@ -614,9 +633,11 @@ class MainApp:
         self.page.update()
 
     def do_generate_audio_action(self, e):
-        audio_path = audio_apt_generation(self.page, self.status_bar_text, self.audio_status_text,
+        metrics = audio_apt_generation(self.page, self.status_bar_text, self.audio_status_text,
                                           generated_apt_image_path)
-        if not audio_path:
+        if metrics:
+            self.current_metrics["audio_generation"] = metrics
+        else:
             reset_downstream_processing(self.page, "audio_gen_failed")
         self.update_action_buttons_state()
         self.update_sdr_command_display() 
@@ -670,6 +691,20 @@ class MainApp:
         self.update_sdr_command_display() # Asegura que el comando mostrado es el actual
                                          # antes de pasarlo a sdr_transmission
         
+        # Guardar en historial antes de transmitir (o después, pero aquí ya tenemos todo)
+        self.history_manager.add_entry(
+            source_a=image_a_source_path,
+            source_b=image_b_source_path,
+            preprocessed_a=preprocessed_a_path_generated,
+            preprocessed_b=preprocessed_b_path_generated,
+            apt_image=generated_apt_image_path,
+            wav_audio=generated_wav_path,
+            sdr_script=selected_script_display_name,
+            sdr_freq=sdr_options["FREQ_SDR"],
+            sdr_samp_rate=sdr_options["SAMP_RATE_SDR"],
+            metrics=self.current_metrics
+        )
+
         sdr_transmission(
             self.page, 
             self.status_bar_text, 
@@ -679,6 +714,144 @@ class MainApp:
             sdr_options
         )
         # sdr_transmission ya llama a page.update() internamente
+
+    def show_history_dialog(self, e):
+        self.history_items = self.history_manager.get_history()
+        self.filtered_history = list(self.history_items)
+        self.sort_column_index = None
+        self.sort_ascending = True
+
+        self.history_search_field = ft.TextField(
+            label="Filtrar historial...",
+            prefix_icon=ft.Icons.SEARCH,
+            on_change=self.filter_history_table,
+            expand=True
+        )
+
+        self.history_data_table = ft.DataTable(
+            columns=[
+                ft.DataColumn(ft.Text("Fecha/Hora"), on_sort=lambda e: self.sort_history_table(0)),
+                ft.DataColumn(ft.Text("Script SDR"), on_sort=lambda e: self.sort_history_table(1)),
+                ft.DataColumn(ft.Text("Frecuencia"), on_sort=lambda e: self.sort_history_table(2)),
+                ft.DataColumn(ft.Text("Muestreo"), on_sort=lambda e: self.sort_history_table(3)),
+                ft.DataColumn(ft.Text("Archivos")),
+                ft.DataColumn(ft.Text("Métricas")),
+                ft.DataColumn(ft.Text("Acciones")),
+            ],
+            rows=[],
+            column_spacing=15,
+            horizontal_lines=ft.border.BorderSide(1, ft.Colors.OUTLINE_VARIANT),
+            vertical_lines=ft.border.BorderSide(1, ft.Colors.OUTLINE_VARIANT),
+        )
+
+        self.update_history_table()
+
+        history_dialog = ft.AlertDialog(
+            title=ft.Row([
+                ft.Icon(ft.Icons.HISTORY),
+                ft.Text("Historial de Transmisiones"),
+            ], spacing=10),
+            content=ft.Column([
+                ft.Row([
+                    self.history_search_field,
+                    ft.IconButton(ft.Icons.DELETE_SWEEP, tooltip="Vaciar Historial", on_click=self.clear_all_history, icon_color=ft.Colors.RED_400),
+                ], spacing=10),
+                ft.Divider(),
+                ft.Container(
+                    content=ft.Column([self.history_data_table], scroll=ft.ScrollMode.AUTO),
+                    height=400,
+                    width=1000,
+                )
+            ], tight=True, spacing=10),
+            actions=[
+                ft.TextButton("Cerrar", on_click=lambda _: self.close_dialog(history_dialog))
+            ],
+            actions_alignment=ft.MainAxisAlignment.END,
+        )
+
+        self.page.show_dialog(history_dialog)
+        self.page.update()
+
+    def update_history_table(self):
+        self.history_data_table.rows = []
+        for i, entry in enumerate(self.filtered_history):
+            # Formatear métricas
+            m = entry.get("metrics", {})
+            metrics_summary = ""
+            if m.get("audio_generation"):
+                metrics_summary = f"Audio: {m['audio_generation']['time']:.1f}s | {m['audio_generation']['lps']:.1f} LPS"
+            elif m.get("apt_encoding"):
+                metrics_summary = f"APT: {m['apt_encoding']['time']:.1f}s | {m['apt_encoding']['lps']:.1f} LPS"
+
+            # Buscar el índice original para borrar
+            original_index = self.history_items.index(entry)
+
+            self.history_data_table.rows.append(
+                ft.DataRow(
+                    cells=[
+                        ft.DataCell(ft.Text(entry["timestamp"])),
+                        ft.DataCell(ft.Text(entry["sdr_script"])),
+                        ft.DataCell(ft.Text(entry["sdr_freq"])),
+                        ft.DataCell(ft.Text(entry["sdr_samp_rate"])),
+                        ft.DataCell(ft.Row([
+                            ft.IconButton(ft.Icons.IMAGE, tooltip="Ver Orig A", on_click=lambda e, p=entry["source_a"]: open_file_with_default_program(p), disabled=not entry["source_a"]),
+                            ft.IconButton(ft.Icons.IMAGE, tooltip="Ver Orig B", on_click=lambda e, p=entry["source_b"]: open_file_with_default_program(p), disabled=not entry["source_b"]),
+                            ft.IconButton(ft.Icons.TRANSFORM, tooltip="Ver APT", on_click=lambda e, p=entry["apt_image"]: open_file_with_default_program(p), disabled=not entry["apt_image"]),
+                            ft.IconButton(ft.Icons.AUDIO_FILE, tooltip="Oír Audio", on_click=lambda e, p=entry["wav_audio"]: open_file_with_default_program(p), disabled=not entry["wav_audio"]),
+                        ], spacing=0)),
+                        ft.DataCell(ft.Text(metrics_summary, size=11)),
+                        ft.DataCell(ft.IconButton(ft.Icons.DELETE_OUTLINE, icon_color=ft.Colors.RED_400, on_click=lambda e, idx=original_index: self.delete_history_entry(idx))),
+                    ]
+                )
+            )
+        self.page.update()
+
+    def sort_history_table(self, col_index):
+        if self.sort_column_index == col_index:
+            self.sort_ascending = not self.sort_ascending
+        else:
+            self.sort_column_index = col_index
+            self.sort_ascending = True
+        
+        keys = ["timestamp", "sdr_script", "sdr_freq", "sdr_samp_rate"]
+        key = keys[col_index]
+        
+        self.filtered_history.sort(key=lambda x: x.get(key, ""), reverse=not self.sort_ascending)
+        self.update_history_table()
+
+    def filter_history_table(self, e):
+        search_term = self.history_search_field.value.lower()
+        self.filtered_history = [
+            item for item in self.history_items
+            if search_term in item["timestamp"].lower() or
+               search_term in item["sdr_script"].lower() or
+               search_term in item["sdr_freq"].lower() or
+               search_term in item["sdr_samp_rate"].lower()
+        ]
+        self.update_history_table()
+
+    def delete_history_entry(self, index):
+        self.history_manager.delete_entry(index)
+        self.history_items = self.history_manager.get_history()
+        self.filter_history_table(None)
+
+    def clear_all_history(self, e):
+        def confirm_clear(e):
+            self.history_manager.clear_history()
+            self.history_items = []
+            self.filtered_history = []
+            self.update_history_table()
+            self.close_dialog(confirm_dialog)
+
+        confirm_dialog = ft.AlertDialog(
+            title=ft.Text("Confirmar"),
+            content=ft.Text("¿Está seguro de que desea vaciar todo el historial?"),
+            actions=[
+                ft.TextButton("Cancelar", on_click=lambda _: self.close_dialog(confirm_dialog)),
+                ft.TextButton("Vaciar", on_click=confirm_clear, icon=ft.Icons.DELETE_FOREVER, icon_color=ft.Colors.RED_400),
+            ],
+        )
+        self.page.show_dialog(confirm_dialog)
     
     def update_sdr_command_display(self, e=None): 
         global generated_wav_path 
@@ -779,6 +952,7 @@ class MainApp:
             actions=[
                 ft.PopupMenuButton(
                     items=[
+                        ft.PopupMenuItem(content=ft.Text("Historial"), icon=ft.Icons.HISTORY, on_click=self.show_history_dialog),
                         ft.PopupMenuItem(content=ft.Text("Sobre APT"), on_click=self.show_about_apt_dialog),
                         ft.PopupMenuItem(content=ft.Text("Acerca de..."), on_click=self.show_about_app_dialog),
                         ft.PopupMenuItem(), 
