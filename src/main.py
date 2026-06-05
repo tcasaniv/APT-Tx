@@ -729,9 +729,25 @@ class MainApp:
 
     def save_current_to_history(self, event_name):
         selected_script_display_name = self.sdr_script_dropdown.value if hasattr(self, 'sdr_script_dropdown') else "N/A"
-        sdr_freq = f"{self.slider_freq_tx_sdr.value}M" if hasattr(self, 'slider_freq_tx_sdr') else "N/A"
-        sdr_samp_rate = f"{self.slider_samp_rate_sdr.value}M" if hasattr(self, 'slider_samp_rate_sdr') else "N/A"
+        
+        # Solo capturar parámetros SDR si es un evento de transmisión
+        if "TRANSMISIÓN" in event_name:
+            sdr_freq = f"{self.slider_freq_tx_sdr.value}M" if hasattr(self, 'slider_freq_tx_sdr') else "N/A"
+            sdr_samp_rate = f"{self.slider_samp_rate_sdr.value}M" if hasattr(self, 'slider_samp_rate_sdr') else "N/A"
+        else:
+            sdr_freq = "N/A"
+            sdr_samp_rate = "N/A"
 
+        # Filtrar métricas relevantes para el evento
+        metrics_to_save = {}
+        if "Preprocesamiento" in event_name:
+            metrics_to_save = {k: v for k, v in self.current_metrics.items() if k in ["preprocessed_a", "preprocessed_b"]}
+        elif "Codificación" in event_name:
+            metrics_to_save = {k: v for k, v in self.current_metrics.items() if k in ["preprocessed_a", "preprocessed_b", "apt_encoding"]}
+        elif "Generación" in event_name or "TRANSMISIÓN" in event_name:
+            metrics_to_save = self.current_metrics.copy()
+        
+        import copy
         self.history_manager.add_entry(
             source_a=image_a_source_path,
             source_b=image_b_source_path,
@@ -739,10 +755,10 @@ class MainApp:
             preprocessed_b=preprocessed_b_path_generated,
             apt_image=generated_apt_image_path,
             wav_audio=generated_wav_path,
-            sdr_script=f"[{event_name}] {selected_script_display_name}",
+            sdr_script=f"[{event_name}] {selected_script_display_name}" if "TRANSMISIÓN" in event_name else f"[{event_name}]",
             sdr_freq=sdr_freq,
             sdr_samp_rate=sdr_samp_rate,
-            metrics=self.current_metrics
+            metrics=copy.deepcopy(metrics_to_save)
         )
 
     def load_history_entry(self, entry):
@@ -914,10 +930,10 @@ class MainApp:
                         ft.DataCell(ft.Text(entry["sdr_freq"])),
                         ft.DataCell(ft.Text(entry["sdr_samp_rate"])),
                         ft.DataCell(ft.Row([
-                            ft.IconButton(ft.Icons.IMAGE, tooltip="Ver Orig A", on_click=lambda e, p=entry["source_a"]: open_file_with_default_program(p), disabled=not entry["source_a"], icon_size=18),
-                            ft.IconButton(ft.Icons.IMAGE, tooltip="Ver Orig B", on_click=lambda e, p=entry["source_b"]: open_file_with_default_program(p), disabled=not entry["source_b"], icon_size=18),
-                            ft.IconButton(ft.Icons.TRANSFORM, tooltip="Ver APT", on_click=lambda e, p=entry["apt_image"]: open_file_with_default_program(p), disabled=not entry["apt_image"], icon_size=18),
-                            ft.IconButton(ft.Icons.AUDIO_FILE, tooltip="Oír Audio", on_click=lambda e, p=entry["wav_audio"]: open_file_with_default_program(p), disabled=not entry["wav_audio"], icon_size=18),
+                            ft.IconButton(ft.Icons.IMAGE, tooltip="Ver Orig A", on_click=lambda e, p=entry.get("source_a"): open_file_with_default_program(p) if p else None, disabled=not entry.get("source_a"), icon_size=18),
+                            ft.IconButton(ft.Icons.IMAGE, tooltip="Ver Orig B", on_click=lambda e, p=entry.get("source_b"): open_file_with_default_program(p) if p else None, disabled=not entry.get("source_b"), icon_size=18),
+                            ft.IconButton(ft.Icons.TRANSFORM, tooltip="Ver APT", on_click=lambda e, p=entry.get("apt_image"): open_file_with_default_program(p) if p else None, disabled=not entry.get("apt_image"), icon_size=18),
+                            ft.IconButton(ft.Icons.AUDIO_FILE, tooltip="Oír Audio", on_click=lambda e, p=entry.get("wav_audio"): open_file_with_default_program(p) if p else None, disabled=not entry.get("wav_audio"), icon_size=18),
                         ], spacing=0)),
                         ft.DataCell(ft.Row([
                             ft.ElevatedButton("Retomar", icon=ft.Icons.RESTORE, on_click=lambda e, ent=entry: self.load_history_entry(ent), style=ft.ButtonStyle(padding=5)),
