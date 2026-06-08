@@ -1250,7 +1250,7 @@ class MainApp:
 
         self.text_freq_tx_sdr = ft.Text("Frecuencia de transmisión:")
         self.slider_freq_tx_sdr = ft.Slider(
-            value=137.5, min=88, max=1700, 
+            value=925.0, min=88, max=1700, 
             label="{value} MHz", 
             on_change=slider_freq_changed
         ) 
