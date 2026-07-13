@@ -334,19 +334,46 @@ def sdr_transmission(page: ft.Page, status_label, command_label_ref, wav_to_tran
     status_label.value = f"Ejecutando: {selected_script_filename}..."
     page.update()
 
-    # Configurar entorno para Radioconda en Windows
+    # Copiar el entorno actual para modificarlo
     env = os.environ.copy()
+
+    # --- SOLUCIÓN AL PROBLEMA DE COMPILACIÓN ---
+    # Cuando la app está compilada, heredará variables que fuerzan al subproceso de Python
+    # a buscar librerías en el directorio empaquetado. Restauramos o eliminamos estas variables.
+
+    # 1. Restaurar las variables originales que guardó PyInstaller si existen
+    for var in ["PYTHONPATH", "PYTHONHOME", "PATH", "LD_LIBRARY_PATH", "DYLD_LIBRARY_PATH"]:
+        orig_var = f"{var}_ORIG"
+        if orig_var in env:
+            env[var] = env[orig_var]
+            env.pop(orig_var, None)
+
+    # 2. Eliminar de forma absoluta PYTHONPATH y PYTHONHOME para este subproceso
+    # Esto obliga a Radioconda a usar sus propias rutas de instalación internas.
+    env.pop("PYTHONPATH", None)
+    env.pop("PYTHONHOME", None)
+
+    # 3. Remover el directorio temporal del empaquetado (_MEIPASS) del PATH 
+    # para evitar que cargue DLLs conflictivas de la app de Flet.
+    meipass = getattr(sys, '_MEIPASS', None)
+    if meipass:
+        paths = env.get("PATH", "").split(os.pathsep)
+        paths = [p for p in paths if p.rstrip('\\/') != meipass.rstrip('\\/')]
+        env["PATH"] = os.pathsep.join(paths)
+    # --------------------------------------------
+
+    # Configurar entorno para Radioconda en Windows
     if platform.system() == "Windows" and "radioconda" in command_list[0].lower():
         conda_base = os.path.dirname(command_list[0])
         conda_bin = conda_base
         conda_scripts = os.path.join(conda_base, "Scripts")
         conda_library_bin = os.path.join(conda_base, "Library", "bin")
         
-        # Añadir rutas al PATH
+        # Añadir rutas de Radioconda al inicio del PATH
         new_paths = [conda_bin, conda_scripts, conda_library_bin]
         env["PATH"] = os.pathsep.join(new_paths) + os.pathsep + env.get("PATH", "")
         
-        # También establecer CONDA_PREFIX por si acaso
+        # Establecer CONDA_PREFIX para simular la activación del entorno
         env["CONDA_PREFIX"] = conda_base
 
     try:
@@ -363,7 +390,7 @@ def sdr_transmission(page: ft.Page, status_label, command_label_ref, wav_to_tran
     except FileNotFoundError:
         python_interpreter_path = command_list[0] if command_list else "desconocido"
         status_label.value = f"Error: No se encontró el intérprete Python ('{python_interpreter_path}') o el script '{selected_script_filename}'."
-    except subprocess.CalledProcessError as e: # No se usa con Popen directamente, pero por si acaso
+    except subprocess.CalledProcessError as e: 
         status_label.value = f"Error durante la ejecución de '{selected_script_filename}': {e}. Ver consola."
     except Exception as e:
         status_label.value = f"Error inesperado al ejecutar script GNU Radio: {e}"
