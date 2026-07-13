@@ -1,6 +1,6 @@
 [project]
 name = "apt_tx"
-version = "1.0.1"
+version = "1.0.2"
 description = "Transmite tus imágenes en formato APT como si se tratara de un satélite NOAA"
 readme = "README.md"
 requires-python = ">=3.12"
