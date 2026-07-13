@@ -6,7 +6,30 @@ import subprocess
 import shutil
 import sys # Necesario para sys.executable y sys.frozen
 
-VERSION_APP="v1.0.1"
+def get_version():
+    """Obtiene la versión del archivo pyproject.toml (Single Source of Truth) o fallback."""
+    # Intentar buscar pyproject.toml subiendo niveles (útil en modo desarrollo)
+    curr_dir = os.path.dirname(os.path.abspath(__file__))
+    for _ in range(3):
+        pyproject_path = os.path.join(curr_dir, "pyproject.toml")
+        if os.path.exists(pyproject_path):
+            try:
+                with open(pyproject_path, "r", encoding="utf-8") as f:
+                    for line in f:
+                        if line.strip().startswith("version"):
+                            parts = line.split("=")
+                            if len(parts) > 1:
+                                return "v" + parts[1].strip().strip('"').strip("'")
+            except Exception:
+                pass
+        curr_dir = os.path.dirname(curr_dir)
+    
+    # Fallback si está congelado/empaquetado
+    # El instalador o el proceso de build puede escribir la versión si se prefiere,
+    # pero mantendremos un valor base actualizable.
+    return "v1.0.2"
+
+VERSION_APP = get_version()
 
 # --- Constantes ---
 APP_NAME = "APT-Tx"
