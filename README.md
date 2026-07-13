@@ -129,9 +129,20 @@ Para más detalles sobre la creación de paquetes Linux, consulte la [Guía de E
 
 ### Windows
 
-```
-flet build windows -v
-```
+1. **Compilar la aplicación:**
+   ```sh
+   flet build windows -v
+   ```
+   Esto generará los archivos ejecutables en la carpeta `build/windows`.
+
+2. **Crear el instalador ejecutable (`.exe`):**
+   Para empaquetar la aplicación en un instalador ejecutable de Windows, asegúrese de tener instalado [NSIS (Nullsoft Scriptable Install System)](https://nsis.sourceforge.io/Download) en su sistema.
+   
+   Luego ejecute el script de compilación:
+   ```sh
+   python build_installer.py
+   ```
+   Este script detectará la versión en `pyproject.toml`, validará la presencia de la compilación y usará NSIS para generar el instalador `APT-Tx_Setup.exe` en la raíz del proyecto.
 
 Para más detalles sobre la creación de paquetes Windows, consulte la [Guía de Empaquetado Windows](https://flet.dev/docs/publish/windows/).
 
@@ -181,4 +192,4 @@ poetry run flet run --web
 
 Para más detalles sobre el funcionamiento de la aplicación, consulte la [Guía de introducción](https://flet.dev/docs/getting-started/).
 
-<details＞
+</details>
