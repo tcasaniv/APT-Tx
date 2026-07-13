@@ -1,5 +1,22 @@
 # APT-Tx
-Este programa convierte imágenes en una señal de audio en formato WAV, adecuada para ser transmitida mediante el método de transmisión de imagen de satélite NOAA APT usando usando un equipo SDR (Radio Definida por Software).
+
+Este programa convierte imágenes en una señal de audio en formato WAV, adecuada para ser transmitida mediante el método de transmisión de imagen de satélite NOAA APT usando un equipo SDR (Radio Definida por Software).
+
+<p align="center">
+  <a href="https://tcasaniv.github.io/apt-tx-web/">
+    <img src="https://img.shields.io/badge/Sitio_Web-tcasaniv.github.io-blue?style=for-the-badge&logo=googlechrome&logoColor=white" alt="Sitio Web">
+  </a>
+  <a href="https://github.com/tcasaniv/APT-Tx/releases/download/v1.0.2/APT-Tx_Setup.exe">
+    <img src="https://img.shields.io/badge/Descargar_para_Windows-v1.0.2-0078D6?style=for-the-badge&logo=windows&logoColor=white" alt="Descargar para Windows">
+  </a>
+  <br><br>
+  <span>
+    🐧 <b>Linux</b> & 🍎 <b>macOS</b>: Compatibles mediante ejecución desde el código fuente (ver <a href="#configuraci%C3%B3n-entorno-de-desarrollo-python">Instrucciones de configuración</a>). Próximamente se añadirán instaladores dedicados.
+  </span>
+</p>
+
+---
+
 
 - [APT-Tx](#apt-tx)
   - [Configuración entorno de desarrollo Python](#configuración-entorno-de-desarrollo-python)
