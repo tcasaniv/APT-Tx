@@ -4,10 +4,7 @@ import time
 import platform
 import subprocess
 import shutil
-import requests # Para descargar imágenes desde URL
 import sys # Necesario para sys.executable y sys.frozen
-from utils import apt_encoder, modulate_APT_img_to_audio, preprocesar_img_to_APT
-from history_manager import HistoryManager
 
 VERSION_APP="v1.0.1"
 
@@ -130,6 +127,9 @@ def preprocessing_img(page: ft.Page, image_name_suffix: str, status_bar_text_ref
     output_filename_base = f"preprocessed_img_{image_name_suffix}_{int(time.time())}.png"
     generated_file_path = os.path.join(get_app_files_dir(), output_filename_base)
 
+    # Importación local del preprocesador
+    from utils import preprocesar_img_to_APT
+
     try:
         metrics = preprocesar_img_to_APT(source_image_path_val, generated_file_path, image_name_suffix)
         if metrics:
@@ -174,6 +174,9 @@ def apt_encoding_img(page: ft.Page, status_label, apt_image_display,
     output_filename_base = f"apt_encoded_image_{int(time.time())}.png"
     generated_file_path = os.path.join(get_app_files_dir(), output_filename_base)
     
+    # Importación local de apt_encoder
+    from utils import apt_encoder
+
     try:
         metrics = apt_encoder(preproc_a_path, preproc_b_path, generated_file_path)
         if metrics:
@@ -226,6 +229,9 @@ def audio_apt_generation(page: ft.Page, status_label, audio_status_text, apt_img
 
     output_filename_base = f"apt_generated_audio_{int(time.time())}.wav"
     generated_file_path = os.path.join(get_app_files_dir(), output_filename_base)
+
+    # Importación local del modulador de audio
+    from utils import modulate_APT_img_to_audio
 
     try:
         metrics = modulate_APT_img_to_audio(apt_img_path_val, generated_file_path)
@@ -401,6 +407,9 @@ def sdr_transmission(page: ft.Page, status_label, command_label_ref, wav_to_tran
 class MainApp:
     def __init__(self, page: ft.Page):
         self.page = page
+
+        # Importación local para evitar lentitud al arrancar
+        from history_manager import HistoryManager
         self.history_manager = HistoryManager(os.path.join(get_app_files_dir(), "history.json"))
         self.current_metrics = {
             "preprocessed_a": None,
@@ -495,6 +504,9 @@ class MainApp:
 
     def load_url(self, e, img_tag, txt_url_ref, img_display_ref):
         global image_a_source_path, image_b_source_path
+        
+        # Importación local de requests
+        import requests # Para descargar imágenes desde URL
         
         url_val = txt_url_ref.value.strip()
         path_to_set = None
