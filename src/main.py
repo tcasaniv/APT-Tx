@@ -124,18 +124,60 @@ def get_scripts_dir():
     os.makedirs(scripts_dir, exist_ok=True)
     return scripts_dir
 
+def get_clean_env():
+    """
+    Retorna una copia del entorno del sistema limpio de variables inyectadas por el empaquetador (como PyInstaller)
+    o por el runner de Flet, evitando conflictos de bibliotecas al lanzar subprocesos del sistema.
+    """
+    env = os.environ.copy()
+    
+    # 1. Restaurar o eliminar variables de entorno conflictivas de Py
+    for var in ["PYTHONPATH", "PYTHONHOME", "PATH"]:
+        orig_var = f"{var}_ORIG"
+        if orig_var in env:
+            env[var] = env[orig_var]
+            env.pop(orig_var, None)
+        elif var in ["PYTHONPATH", "PYTHONHOME"]:
+            env.pop(var, None)
+
+    # 2. Para LD_LIBRARY_PATH y DYLD_LIBRARY_PATH, restaurar el original si existe.
+    # Si no existe original pero están presentes, las eliminamos completamente para que el subproceso
+    # use las librerías del sistema host por defecto sin conflictos.
+    for var in ["LD_LIBRARY_PATH", "DYLD_LIBRARY_PATH"]:
+        orig_var = f"{var}_ORIG"
+        if orig_var in env:
+            env[var] = env[orig_var]
+            env.pop(orig_var, None)
+        else:
+            env.pop(var, None)
+
+    # 3. Eliminar variables GTK/GIO conflictivas que causan errores de símbolos en Snaps (como xdg-open/gestores de archivos)
+    env.pop("GTK_PATH", None)
+    env.pop("GIO_MODULE_DIR", None)
+
+    # 4. Remover el directorio temporal _MEIPASS del PATH si está presente
+    meipass = getattr(sys, '_MEIPASS', None)
+    if meipass:
+        paths = env.get("PATH", "").split(os.pathsep)
+        paths = [p for p in paths if p.rstrip('\\/') != meipass.rstrip('\\/')]
+        env["PATH"] = os.pathsep.join(paths)
+        
+    return env
+
 def open_file_with_default_program(filepath):
     try:
         if not filepath or not os.path.exists(filepath):
             print(f"No se puede abrir: '{filepath}'. No es un archivo válido o no existe.")
             return False
         
+        env = get_clean_env()
+        
         if platform.system() == 'Windows':
             os.startfile(filepath)
         elif platform.system() == 'Darwin':  # macOS
-            subprocess.call(('open', filepath))
+            subprocess.call(('open', filepath), env=env)
         elif platform.system() == 'Linux':
-            subprocess.call(('xdg-open', filepath))
+            subprocess.call(('xdg-open', filepath), env=env)
         else:
             raise NotImplementedError(f"Plataforma no soportada: {platform.system()}")
         return True
@@ -458,33 +500,8 @@ def sdr_transmission(page: ft.Page, status_label, command_label_ref, wav_to_tran
     status_label.value = f"Ejecutando: {selected_script_filename}..."
     page.update()
 
-    # Copiar el entorno actual para modificarlo
-    env = os.environ.copy()
-
-    # --- SOLUCIÓN AL PROBLEMA DE COMPILACIÓN ---
-    # Cuando la app está compilada, heredará variables que fuerzan al subproceso de Python
-    # a buscar librerías en el directorio empaquetado. Restauramos o eliminamos estas variables.
-
-    # 1. Restaurar las variables originales que guardó PyInstaller si existen
-    for var in ["PYTHONPATH", "PYTHONHOME", "PATH", "LD_LIBRARY_PATH", "DYLD_LIBRARY_PATH"]:
-        orig_var = f"{var}_ORIG"
-        if orig_var in env:
-            env[var] = env[orig_var]
-            env.pop(orig_var, None)
-
-    # 2. Eliminar de forma absoluta PYTHONPATH y PYTHONHOME para este subproceso
-    # Esto obliga a Radioconda a usar sus propias rutas de instalación internas.
-    env.pop("PYTHONPATH", None)
-    env.pop("PYTHONHOME", None)
-
-    # 3. Remover el directorio temporal del empaquetado (_MEIPASS) del PATH 
-    # para evitar que cargue DLLs conflictivas de la app de Flet.
-    meipass = getattr(sys, '_MEIPASS', None)
-    if meipass:
-        paths = env.get("PATH", "").split(os.pathsep)
-        paths = [p for p in paths if p.rstrip('\\/') != meipass.rstrip('\\/')]
-        env["PATH"] = os.pathsep.join(paths)
-    # --------------------------------------------
+    # Copiar el entorno actual limpio para el subproceso
+    env = get_clean_env()
 
     # Configurar entorno para Conda/Radioconda
     py_path = command_list[0]
