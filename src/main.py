@@ -288,6 +288,82 @@ def audio_apt_generation(page: ft.Page, status_label, audio_status_text, apt_img
         generated_wav_path = None
         return None
 
+def detect_python_interpreter():
+    """
+    Detecta el intérprete de Python adecuado para ejecutar scripts de GNU Radio.
+    Busca preferentemente la distribución Radioconda, entornos Conda activos,
+    y cae en el Python del sistema si no se encuentra.
+    """
+    sys_platform = platform.system()
+    
+    # 1. Comprobar si hay un entorno Conda activo
+    conda_prefix = os.environ.get("CONDA_PREFIX")
+    if conda_prefix:
+        if sys_platform == 'Windows':
+            py_exe = os.path.join(conda_prefix, "python.exe")
+            if os.path.exists(py_exe):
+                return py_exe
+        else:
+            py_exe = os.path.join(conda_prefix, "bin", "python3")
+            if not os.path.exists(py_exe):
+                py_exe = os.path.join(conda_prefix, "bin", "python")
+            if os.path.exists(py_exe):
+                return py_exe
+
+    # 2. Comprobar si gnuradio-companion está en el PATH
+    grc_bin = shutil.which("gnuradio-companion")
+    if grc_bin:
+        grc_dir = os.path.dirname(grc_bin)
+        if sys_platform == 'Windows':
+            py_exe = os.path.join(os.path.dirname(grc_dir), "python.exe")
+            if os.path.exists(py_exe):
+                return py_exe
+        else:
+            py_exe = os.path.join(grc_dir, "python3")
+            if not os.path.exists(py_exe):
+                py_exe = os.path.join(grc_dir, "python")
+            if os.path.exists(py_exe):
+                return py_exe
+
+    # 3. Comprobar rutas comunes de instalación de Radioconda
+    if sys_platform == 'Windows':
+        common_paths = [
+            os.path.join(os.environ.get('ProgramData', 'C:\\ProgramData'), 'radioconda'),
+            os.path.join(os.environ.get('LOCALAPPDATA', ''), 'radioconda'),
+            os.path.join(os.environ.get('USERPROFILE', ''), 'radioconda'),
+            os.path.join(os.environ.get('ProgramFiles', 'C:\\Program Files'), 'radioconda'),
+            "C:\\radioconda"
+        ]
+        for base in common_paths:
+            if base:
+                py_exe = os.path.join(base, "python.exe")
+                if os.path.exists(py_exe):
+                    return py_exe
+    else:
+        home = os.path.expanduser("~")
+        common_paths = [
+            os.path.join(home, "radioconda"),
+            "/opt/radioconda",
+            "/usr/local/radioconda"
+        ]
+        for base in common_paths:
+            for py_name in ["python3", "python"]:
+                py_exe = os.path.join(base, "bin", py_name)
+                if os.path.exists(py_exe):
+                    return py_exe
+
+    # 4. Caída a valores predeterminados por plataforma
+    if sys_platform == 'Windows':
+        return "C:\\ProgramData\\radioconda\\python.exe"
+    elif sys_platform == 'Darwin':
+        for path in ["/opt/homebrew/opt/python3/bin/python3", "/usr/local/bin/python3"]:
+            if os.path.exists(path):
+                return path
+        return "/usr/bin/python3"
+    else:
+        return "/usr/bin/python3"
+
+
 def build_sdr_command(wav_to_transmit_path, selected_script_filename, sdr_options_controls, scripts_base_dir):
     """
     Construye el comando para ejecutar el script GNU Radio y una cadena para mostrar.
@@ -309,18 +385,7 @@ def build_sdr_command(wav_to_transmit_path, selected_script_filename, sdr_option
     if not os.path.exists(script_full_path):
         return None, f"Error: El script '{selected_script_filename}' no se encuentra en '{scripts_base_dir}'."
 
-    interprete_python="/usr/bin/python3"
-    if platform.system() == 'Windows':
-        # interprete_python="~\\AppData\\Local\\Programs\\Python\\Python313\\python.exe"
-        interprete_python="C:\\ProgramData\\radioconda\\python.exe"
-    elif platform.system() == 'Darwin':  # macOS
-        # interprete_python="/opt/homebrew/opt/python@3.13/bin/python3"
-        # interprete_python="/opt/homebrew/Cellar/gnuradio/3.10.12.0_1/libexec/venv/bin/python"
-        interprete_python="/opt/homebrew/opt/python3/bin/python3"
-    elif platform.system() == 'Linux':
-        interprete_python="/usr/bin/python3"
-    else:
-        print("Error: Plataforma no soportada. Usando Python por defecto.")
+    interprete_python = detect_python_interpreter()
 
     command_list = [
         interprete_python,
@@ -391,15 +456,33 @@ def sdr_transmission(page: ft.Page, status_label, command_label_ref, wav_to_tran
         env["PATH"] = os.pathsep.join(paths)
     # --------------------------------------------
 
-    # Configurar entorno para Radioconda en Windows
-    if platform.system() == "Windows" and "radioconda" in command_list[0].lower():
-        conda_base = os.path.dirname(command_list[0])
-        conda_bin = conda_base
-        conda_scripts = os.path.join(conda_base, "Scripts")
-        conda_library_bin = os.path.join(conda_base, "Library", "bin")
-        
+    # Configurar entorno para Conda/Radioconda
+    py_path = command_list[0]
+    is_conda = False
+    conda_base = None
+    
+    if platform.system() == "Windows":
+        conda_base_candidate = os.path.dirname(py_path)
+        if os.path.exists(os.path.join(conda_base_candidate, "conda-meta")) or "radioconda" in py_path.lower() or "conda" in py_path.lower():
+            is_conda = True
+            conda_base = conda_base_candidate
+    else:
+        conda_base_candidate = os.path.dirname(os.path.dirname(py_path))
+        if os.path.exists(os.path.join(conda_base_candidate, "conda-meta")) or "radioconda" in py_path.lower() or "conda" in py_path.lower():
+            is_conda = True
+            conda_base = conda_base_candidate
+
+    if is_conda and conda_base:
+        if platform.system() == "Windows":
+            conda_bin = conda_base
+            conda_scripts = os.path.join(conda_base, "Scripts")
+            conda_library_bin = os.path.join(conda_base, "Library", "bin")
+            new_paths = [conda_bin, conda_scripts, conda_library_bin]
+        else:
+            conda_bin = os.path.join(conda_base, "bin")
+            new_paths = [conda_bin]
+            
         # Añadir rutas de Radioconda al inicio del PATH
-        new_paths = [conda_bin, conda_scripts, conda_library_bin]
         env["PATH"] = os.pathsep.join(new_paths) + os.pathsep + env.get("PATH", "")
         
         # Establecer CONDA_PREFIX para simular la activación del entorno
