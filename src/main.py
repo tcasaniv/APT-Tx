@@ -5,6 +5,7 @@ import platform
 import subprocess
 import shutil
 import sys # Necesario para sys.executable y sys.frozen
+import json
 
 def get_version():
     """Obtiene la versión del archivo pyproject.toml (Single Source of Truth) o fallback."""
@@ -91,6 +92,31 @@ def get_app_files_dir():
     app_dir = os.path.join(base_path, APP_FILES_DIR_NAME)
     os.makedirs(app_dir, exist_ok=True)
     return app_dir
+
+# --- Configuración del Sistema ---
+CONFIG_FILE_NAME = "config.json"
+CUSTOM_PYTHON_PATH = None
+
+def get_config_path():
+    return os.path.join(get_app_files_dir(), CONFIG_FILE_NAME)
+
+def load_config():
+    path = get_config_path()
+    if os.path.exists(path):
+        try:
+            with open(path, "r", encoding="utf-8") as f:
+                return json.load(f)
+        except Exception:
+            pass
+    return {}
+
+def save_config(config_data):
+    path = get_config_path()
+    try:
+        with open(path, "w", encoding="utf-8") as f:
+            json.dump(config_data, f, ensure_ascii=False, indent=4)
+    except Exception:
+        pass
 
 def get_scripts_dir():
     """Obtiene la ruta a la carpeta de scripts de GNU Radio y la crea si no existe."""
@@ -294,6 +320,10 @@ def detect_python_interpreter():
     Busca preferentemente la distribución Radioconda, entornos Conda activos,
     y cae en el Python del sistema si no se encuentra.
     """
+    global CUSTOM_PYTHON_PATH
+    if CUSTOM_PYTHON_PATH and os.path.exists(CUSTOM_PYTHON_PATH):
+        return CUSTOM_PYTHON_PATH
+
     sys_platform = platform.system()
     
     # 1. Comprobar si hay un entorno Conda activo
@@ -514,6 +544,14 @@ class MainApp:
     def __init__(self, page: ft.Page):
         self.page = page
 
+        # Cargar configuración (Ruta Python y Tema)
+        global CUSTOM_PYTHON_PATH
+        config = load_config()
+        CUSTOM_PYTHON_PATH = config.get("custom_python_path", None)
+        
+        theme_mode_str = config.get("theme_mode", "dark")
+        self.page.theme_mode = ft.ThemeMode.DARK if theme_mode_str == "dark" else ft.ThemeMode.LIGHT
+
         # Importación local para evitar lentitud al arrancar
         from history_manager import HistoryManager
         self.history_manager = HistoryManager(os.path.join(get_app_files_dir(), "history.json"))
@@ -533,6 +571,109 @@ class MainApp:
             actions=[ft.TextButton("Cerrar", on_click=lambda _: self.close_dialog(dialog))],
             actions_alignment=ft.MainAxisAlignment.END,
         )
+        self.page.show_dialog(dialog)
+        self.page.update()
+
+    def toggle_theme_mode(self, e):
+        if self.page.theme_mode == ft.ThemeMode.DARK:
+            self.page.theme_mode = ft.ThemeMode.LIGHT
+            self.theme_menu_item.content.value = "Modo Oscuro"
+            self.theme_menu_item.icon = ft.Icons.DARK_MODE
+            theme_str = "light"
+        else:
+            self.page.theme_mode = ft.ThemeMode.DARK
+            self.theme_menu_item.content.value = "Modo Claro"
+            self.theme_menu_item.icon = ft.Icons.LIGHT_MODE
+            theme_str = "dark"
+        
+        # Guardar en config
+        config = load_config()
+        config["theme_mode"] = theme_str
+        save_config(config)
+        
+        self.page.update()
+
+    async def show_python_path_dialog(self, e):
+        # Obtener ruta autodetectada (sin tener en cuenta la personalizada)
+        global CUSTOM_PYTHON_PATH
+        temp_custom = CUSTOM_PYTHON_PATH
+        CUSTOM_PYTHON_PATH = None
+        auto_path = detect_python_interpreter()
+        CUSTOM_PYTHON_PATH = temp_custom
+        
+        custom_path_tf = ft.TextField(
+            label="Ruta personalizada al intérprete de Python",
+            value=CUSTOM_PYTHON_PATH or "",
+            hint_text="Ej: /usr/bin/python3 o C:\\ProgramData\\radioconda\\python.exe",
+            expand=True,
+        )
+        
+        status_text = ft.Text(
+            f"Ruta autodetectada actual: {auto_path}\n"
+            f"Ruta en uso: {CUSTOM_PYTHON_PATH or auto_path}",
+            size=12,
+            italic=True,
+            color=ft.Colors.SECONDARY
+        )
+
+        async def pick_python_path(e):
+            files = await ft.FilePicker().pick_files(
+                allow_multiple=False,
+                dialog_title="Seleccionar ejecutable de Python"
+            )
+            if files and len(files) > 0:
+                custom_path_tf.value = files[0].path
+                custom_path_tf.update()
+
+        def on_save(e):
+            global CUSTOM_PYTHON_PATH
+            new_path = custom_path_tf.value.strip()
+            
+            if new_path:
+                if not os.path.exists(new_path):
+                    custom_path_tf.error_text = "El archivo especificado no existe o la ruta no es válida."
+                    self.page.update()
+                    return
+                if not os.path.isfile(new_path):
+                    custom_path_tf.error_text = "La ruta debe apuntar a un archivo ejecutable, no a una carpeta."
+                    self.page.update()
+                    return
+                CUSTOM_PYTHON_PATH = new_path
+            else:
+                CUSTOM_PYTHON_PATH = None
+
+            # Guardar en config
+            config = load_config()
+            config["custom_python_path"] = CUSTOM_PYTHON_PATH
+            save_config(config)
+            
+            self.close_dialog(dialog)
+            self.status_bar_text.value = f"Configuración de Python guardada. Ruta en uso: {CUSTOM_PYTHON_PATH or auto_path}"
+            self.update_sdr_command_display()
+            self.page.update()
+
+        dialog = ft.AlertDialog(
+            title=ft.Text("Configuración de Python para GNU Radio"),
+            content=ft.Column([
+                ft.Text("Configure manualmente la ruta del ejecutable de Python que contiene GNU Radio / Radioconda."),
+                ft.Row([
+                    custom_path_tf,
+                    ft.IconButton(
+                        icon=ft.Icons.FOLDER_OPEN,
+                        tooltip="Buscar ejecutable",
+                        on_click=pick_python_path
+                    )
+                ]),
+                status_text,
+                ft.Text("Deje el campo vacío para volver a la detección automática.", size=11, italic=True),
+            ], tight=True, spacing=15, width=500),
+            actions=[
+                ft.TextButton("Cancelar", on_click=lambda _: self.close_dialog(dialog)),
+                ft.TextButton("Guardar", on_click=on_save),
+            ],
+            actions_alignment=ft.MainAxisAlignment.END,
+        )
+        
         self.page.show_dialog(dialog)
         self.page.update()
 
@@ -1228,6 +1369,13 @@ class MainApp:
             border=ft.Border.only(top=ft.border.BorderSide(1, ft.Colors.OUTLINE_VARIANT))
         )
 
+        # Items dinámicos para el menú de opciones
+        self.theme_menu_item = ft.PopupMenuItem(
+            content=ft.Text("Modo Claro" if self.page.theme_mode == ft.ThemeMode.DARK else "Modo Oscuro"),
+            icon=ft.Icons.LIGHT_MODE if self.page.theme_mode == ft.ThemeMode.DARK else ft.Icons.DARK_MODE,
+            on_click=self.toggle_theme_mode
+        )
+
         app_bar = ft.AppBar(
             title=ft.Text(f"{APP_NAME} | Simulador de Pases Satelitales NOAA"),
             center_title=False,
@@ -1238,6 +1386,9 @@ class MainApp:
                         ft.PopupMenuItem(content=ft.Text("Historial"), icon=ft.Icons.HISTORY, on_click=self.show_history_dialog),
                         ft.PopupMenuItem(content=ft.Text("Sobre APT"), on_click=self.show_about_apt_dialog),
                         ft.PopupMenuItem(content=ft.Text("Acerca de..."), on_click=self.show_about_app_dialog),
+                        ft.PopupMenuItem(), 
+                        ft.PopupMenuItem(content=ft.Text("Configurar Python"), icon=ft.Icons.SETTINGS, on_click=self.show_python_path_dialog),
+                        self.theme_menu_item,
                         ft.PopupMenuItem(), 
                         ft.PopupMenuItem(content=ft.Text("Resetear Todo"), icon=ft.Icons.REFRESH, on_click=self.reset_all_processing_state_and_ui)
                     ]
