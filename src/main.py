@@ -28,7 +28,7 @@ def get_version():
     # Fallback si está congelado/empaquetado
     # El instalador o el proceso de build puede escribir la versión si se prefiere,
     # pero mantendremos un valor base actualizable.
-    return "v1.0.2"
+    return "v1.0.3"
 
 VERSION_APP = get_version()
 

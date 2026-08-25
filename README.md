@@ -6,8 +6,8 @@ Este programa convierte imágenes en una señal de audio en formato WAV, adecuad
   <a href="https://tcasaniv.github.io/apt-tx-web/">
     <img src="https://img.shields.io/badge/Sitio_Web-tcasaniv.github.io-blue?style=for-the-badge&logo=googlechrome&logoColor=white" alt="Sitio Web">
   </a>
-  <a href="https://github.com/tcasaniv/APT-Tx/releases/download/v1.0.2/APT-Tx_Setup.exe">
-    <img src="https://img.shields.io/badge/Descargar_para_Windows-v1.0.2-0078D6?style=for-the-badge&logo=windows&logoColor=white" alt="Descargar para Windows">
+  <a href="https://github.com/tcasaniv/APT-Tx/releases/latest/download/APT-Tx_Setup.exe">
+    <img src="https://img.shields.io/badge/Descargar_para_Windows-v1.0.3-0078D6?style=for-the-badge&logo=windows&logoColor=white" alt="Descargar para Windows">
   </a>
   <br><br>
   <span>

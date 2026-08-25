@@ -21,7 +21,7 @@ def get_app_version():
                         return parts[1].strip().strip('"').strip("'")
     except Exception:
         pass
-    return "1.0.2"  # Versión por defecto en caso de error
+    return "1.0.3"  # Versión por defecto en caso de error
 
 def create_nsis_script(version):
     # Rutas a recursos visuales (iconos e imágenes)
